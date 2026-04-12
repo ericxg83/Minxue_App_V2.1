@@ -1,0 +1,5 @@
+{
+  "name": "错题整理工具",
+  "description": "上传试卷图片，AI 自动识别题目并支持手动微调，快速整理错题集。",
+  "requestFramePermissions": []
+}

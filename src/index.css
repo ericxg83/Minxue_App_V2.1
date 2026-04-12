@@ -1,0 +1,36 @@
+@import "tailwindcss";
+@import "katex/dist/katex.min.css";
+
+.markdown-body {
+  font-family: inherit;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.markdown-body p {
+  margin: 0;
+}
+
+.markdown-body .katex {
+  font-size: 1.1em;
+}
+
+@media print {
+  @page {
+    margin: 20mm;
+  }
+  body {
+    background: white !important;
+  }
+  .print-only {
+    display: block !important;
+  }
+  .print\:grid-cols-4 {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 8px !important;
+  }
+  .print\:grid-cols-4 > div {
+    white-space: normal !important;
+  }
+}
