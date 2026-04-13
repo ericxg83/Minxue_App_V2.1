@@ -24,24 +24,40 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Grant execute permission for gradlew
-        run: chmod +x ./android/gradlew
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v3
         
-      - name: Build Debug APK
-        working-directory: ./android
-        run: ./gradlew assembleDebug --no-daemon
+      - name: Grant execute permission for gradlew
+        run: |
+          cd android
+          chmod +x gradlew 2>/dev/null || true
+          # 如果 gradlew 不存在，创建一个简单的 wrapper
+          if [ ! -f "gradlew" ]; then
+            echo "#!/bin/bash" > gradlew
+            echo 'exec gradle "$@"' >> gradlew
+            chmod +x gradlew
+          fi
+
+      - name: Build Debug APK with Gradle
+        uses: gradle/gradle-build-action@v3
+        with:
+          arguments: assembleDebug
+          build-root-directory: android
 
       - name: Upload Debug APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: debug-apk
-          path: android/app/build/outputs/apk/debug/app-debug.apk
+          path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 30
+          if-no-files-found: error
           
       - name: Display APK info
         run: |
           echo "📱 APK Build Summary"
           echo "====================="
-          ls -lh android/app/build/outputs/apk/debug/app-debug.apk
+          find android/app/build/outputs/apk/debug -name "*.apk" -type f | while read apk; do
+            ls -lh "$apk"
+          done
           echo ""
           echo "✅ APK file is ready for download!"
