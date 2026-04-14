@@ -703,9 +703,18 @@ export default function App() {
   const handleSaveStudent = async () => {
     if (!studentFormData.name.trim()) return;
     setIsSavingStudent(true);
+    setError(null);
+    
+    console.log("\n=== 💾 SAVING STUDENT ===");
+    console.log("Mode:", editingStudent ? "EDIT" : "ADD");
+    console.log("Student data:", studentFormData);
+    
     try {
       const url = editingStudent ? `/api/students/${editingStudent.id}` : '/api/students';
       const method = editingStudent ? 'PUT' : 'POST';
+      
+      console.log("Request URL:", url);
+      console.log("Request Method:", method);
       
       const res = await fetch(url, {
         method,
@@ -717,22 +726,54 @@ export default function App() {
       });
       
       const data = await res.json();
+      console.log("Response status:", res.status);
+      console.log("Response data:", data);
+      
       if (res.ok) {
+        // 🔍 检查是否是 mock 模式（数据未持久化）
+        if (data.warning) {
+          console.warn("⚠️ Server warning:", data.warning);
+          setError(data.warning);
+          // 仍然更新本地UI，但提示用户
+        }
+        
         if (editingStudent) {
+          console.log("✅ Student updated successfully");
           setStudents(prev => prev.map(s => s.id === editingStudent.id ? data.student : s));
           if (selectedStudent === editingStudent.name) setSelectedStudent(data.student.name);
         } else {
-          setStudents(prev => [...prev, data.student]);
+          console.log("✅ Student added successfully");
+          
+          // ✅ FIX: 成功后重新获取最新列表，确保数据一致性
+          try {
+            const listRes = await fetch('/api/students');
+            const newList = await listRes.json();
+            if (listRes.ok && Array.isArray(newList)) {
+              console.log("📚 Refreshed student list from server:", newList.length, "students");
+              setStudents(newList);
+            } else {
+              // 如果刷新失败，使用后端返回的数据
+              setStudents(prev => [...prev, data.student]);
+            }
+          } catch (refreshErr) {
+            console.error("Failed to refresh list, using local update:", refreshErr);
+            setStudents(prev => [...prev, data.student]);
+          }
+          
           if (!selectedStudent) setSelectedStudent(data.student.name);
         }
+        
         setIsAddingStudent(false);
         setEditingStudent(null);
         setStudentFormData({ name: '', grade: '一年级', semester: '上学期', parentName: '', contact: '', avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=default' });
+        
+        console.log("=== ✅ SAVE STUDENT COMPLETE ===\n");
       } else {
+        console.error("❌ Save failed:", data.error);
         setError(data.error || "保存失败");
       }
     } catch (err) {
-      console.error("Save student failed", err);
+      console.error("💥 Save student exception:", err);
       setError("网络错误，保存失败");
     } finally {
       setIsSavingStudent(false);
@@ -1375,18 +1416,57 @@ export default function App() {
   };
 
   const handleDeleteStudent = async (id: string) => {
+    console.log("\n=== 🗑️ DELETE STUDENT REQUESTED ===");
+    console.log("Student ID:", id);
+    
+    // 查找要删除的学生信息
+    const studentToDelete = students.find(s => s.id === id);
+    console.log("Student to delete:", studentToDelete?.name);
+    
+    // ✅ FIX: 添加确认对话框
+    const confirmed = window.confirm(
+      `确定要删除该学生吗？此操作不可恢复\n\n` +
+      `学生姓名：${studentToDelete?.name || '未知'}\n` +
+      `年级：${studentToDelete?.grade || '未知'}`
+    );
+    
+    if (!confirmed) {
+      console.log("❌ User cancelled deletion");
+      console.log("=== END DELETE (CANCELLED) ===\n");
+      return; // 用户取消，不执行删除
+    }
+    
+    console.log("✅ User confirmed deletion");
+    console.log("Sending DELETE request...");
+    
     try {
       const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      
+      console.log("Response status:", res.status);
+      console.log("Response data:", data);
+      
       if (res.ok) {
-        const deletedStudent = students.find(s => s.id === id);
+        console.log("✅ Student deleted successfully from server");
+        
+        // 更新本地状态
         setStudents(prev => prev.filter(s => s.id !== id));
-        if (selectedStudent === deletedStudent?.name) {
+        
+        // 如果删除的是当前选中的学生，切换到第一个剩余学生
+        if (selectedStudent === studentToDelete?.name) {
           const remaining = students.filter(s => s.id !== id);
           setSelectedStudent(remaining.length > 0 ? remaining[0].name : '');
+          console.log("Switched selected student to:", remaining.length > 0 ? remaining[0].name : '(none)');
         }
+        
+        console.log("=== ✅ DELETE COMPLETE ===\n");
+      } else {
+        console.error("❌ Delete failed:", data.error);
+        setError(`删除失败：${data.error || "服务器错误"}`);
       }
     } catch (err) {
-      console.error("Delete student failed", err);
+      console.error("💥 Delete student exception:", err);
+      setError("网络错误，删除失败");
     }
   };
 
@@ -2884,7 +2964,11 @@ export default function App() {
                     </div>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button 
-                        onClick={() => {
+                        onClick={(e) => {
+                          console.log("\n=== ✏️ EDIT BUTTON CLICKED ===");
+                          console.log("Student to edit:", s);
+                          e.stopPropagation(); // 阻止事件冒泡
+                          
                           setEditingStudent(s);
                           setStudentFormData({
                             name: s.name,
@@ -2895,8 +2979,14 @@ export default function App() {
                             avatar: s.avatar || ''
                           });
                           setIsAddingStudent(true);
+                          
+                          console.log("Editing student set:", s.name);
+                          console.log("Form data updated");
+                          console.log("IsAddingStudent:", true);
+                          console.log("=== END EDIT BUTTON ===\n");
                         }}
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                        title="编辑学生信息"
                       >
                         <Edit3 className="w-4 h-4" />
                       </button>
