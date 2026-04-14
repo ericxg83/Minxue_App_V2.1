@@ -58,13 +58,42 @@ const qwenEndpoint = process.env.QWEN_ENDPOINT || "https://api-inference.modelsc
 const supabaseUrl = process.env.SUPABASE_URL || "https://bedphahmxdpnzwvsnjay.supabase.co";
 const supabaseKey = process.env.SUPABASE_ANON_KEY || "sb_publishable_Az5Yk8dG6elDjm4QWkc1cw_sMLOne4t";
 
+// 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
+console.log("=== SUPABASE CONFIGURATION DEBUG ===");
+console.log("Environment:", process.env.NODE_ENV || "development");
+console.log("SUPABASE_URL:", supabaseUrl);
+console.log("SUPABASE_ANON_KEY present:", !!supabaseKey);
+console.log("SUPABASE_ANON_KEY length:", supabaseKey?.length);
+console.log("SUPABASE_ANON_KEY prefix:", supabaseKey?.substring(0, 10) + "...");
+console.log("=====================================");
+
 // Check if credentials are valid and not placeholders
 const isValidConfig = (url?: string, key?: string) => {
-  if (!url || !key) return false;
-  if (url.includes("YOUR_SUPABASE_URL") || key.includes("YOUR_SUPABASE_ANON_KEY")) return false;
-  if (!url.startsWith("https://")) return false;
-  // Supabase keys are JWTs, which typically have 3 parts separated by dots
-  if (key.split('.').length !== 3 && !key.startsWith("eyJ")) return false;
+  console.log("[isValidConfig] Checking credentials...");
+  console.log("[isValidConfig] URL provided:", !!url);
+  console.log("[isValidConfig] Key provided:", !!key);
+  
+  if (!url || !key) {
+    console.warn("[isValidConfig] ❌ Missing URL or Key");
+    return false;
+  }
+  if (url.includes("YOUR_SUPABASE_URL") || key.includes("YOUR_SUPABASE_ANON_KEY")) {
+    console.warn("[isValidConfig] ❌ Placeholder values detected");
+    return false;
+  }
+  if (!url.startsWith("https://")) {
+    console.warn("[isValidConfig] ❌ URL not HTTPS");
+    return false;
+  }
+  
+  // ✅ FIX: 放宽验证逻辑，允许非标准格式的 key
+  // 只要 key 存在且长度合理就认为是有效的
+  if (key.length < 20) {
+    console.warn("[isValidConfig] ❌ Key too short");
+    return false;
+  }
+  
+  console.log("[isValidConfig] ✅ Credentials appear valid");
   return true;
 };
 
@@ -74,7 +103,11 @@ let supabase = isValidConfig(supabaseUrl, supabaseKey)
   : null;
 
 if (!supabase && (supabaseUrl || supabaseKey)) {
-  console.warn("Supabase credentials detected but appear invalid or placeholders. Falling back to mock mode.");
+  console.error("⚠️ Supabase client initialization FAILED!");
+  console.error("⚠️ Falling back to MOCK mode - DATA WILL NOT PERSIST!");
+  console.error("⚠️ Check your SUPABASE_URL and SUPABASE_ANON_KEY environment variables");
+} else if (supabase) {
+  console.log("✅ Supabase client initialized successfully");
 }
 
 // 打印任务存储
@@ -261,57 +294,134 @@ app.use(express.json({ limit: '50mb' }));
 
 // API: Get Students
 app.get("/api/students", async (req, res) => {
+  console.log("\n=== 📚 GET STUDENTS API CALLED ===");
+  console.log("Timestamp:", new Date().toISOString());
+  console.log("Environment:", process.env.NODE_ENV || "development");
+  
   try {
+    console.log("\n🔌 Supabase Client Status:", !!supabase);
+    
     if (!supabase) {
+      console.warn("⚠️ Returning MOCK data (", mockStudents.length, "students)");
       return res.json(mockStudents);
     }
+
+    console.log("\n💾 Querying database: SELECT * FROM students");
     const { data, error } = await supabase
       .from('students')
       .select('*');
     
     if (error) {
-      console.error("Supabase Students Error:", error);
+      console.error("❌ Database query error:", error.message);
+      console.error("- Error details:", JSON.stringify(error, null, 2));
       return res.json(mockStudents); // Fallback to mock
     }
+    
+    console.log("✅ Query successful:", data?.length, "students found");
+    if (data && data.length > 0) {
+      console.log("- Student names:", data.map((s: any) => s.name).join(", "));
+    }
+    
     res.json(data);
   } catch (error) {
-    console.error("Students API Exception:", error);
+    console.error("💥 Students API Exception:", error);
     res.json(mockStudents);
   }
+  console.log("=== END GET STUDENTS API ===\n");
 });
 
 // API: Add Student
 app.post("/api/students", async (req, res) => {
+    console.log("\n=== 📝 ADD STUDENT API CALLED ===");
+    console.log("Timestamp:", new Date().toISOString());
+    console.log("Environment:", process.env.NODE_ENV || "development");
+    
     try {
       const studentData = req.body;
-      if (!studentData.name) return res.status(400).json({ error: "姓名不能为空" });
+      
+      // 🔍 DEBUG: 打印完整的请求数据
+      console.log("\n📥 Request Body (studentData):");
+      console.log("- Keys:", Object.keys(studentData));
+      console.log("- Full data:", JSON.stringify(studentData, null, 2));
+      console.log("- Name:", studentData?.name);
+      console.log("- Grade:", studentData?.grade);
+      console.log("- Semester:", studentData?.semester);
+      
+      if (!studentData.name) {
+        console.error("❌ Validation failed: Name is empty");
+        return res.status(400).json({ error: "姓名不能为空" });
+      }
 
+      // 🔍 DEBUG: 检查 Supabase 客户端状态
+      console.log("\n🔌 Supabase Client Status:");
+      console.log("- supabase object exists:", !!supabase);
+      console.log("- supabase type:", typeof supabase);
       if (!supabase) {
+        console.warn("⚠️ Using MOCK mode - data will NOT persist to database!");
+        console.warn("⚠️ This is likely due to invalid SUPABASE credentials");
+        
         const newStudent = {
           ...studentData,
           id: Date.now().toString(),
           avatar: studentData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${studentData.name}`
         };
+        
         mockStudents.push(newStudent);
-        return res.json({ success: true, student: newStudent });
+        console.log("✅ Mock mode: Student added to memory (will be lost on refresh)");
+        console.log("- New student ID:", newStudent.id);
+        console.log("- Total mock students:", mockStudents.length);
+        
+        return res.json({ 
+          success: true, 
+          student: newStudent,
+          warning: "⚠️ MOCK MODE: Data not persisted to database"
+        });
       }
+
+      // ✅ 使用真正的数据库操作
+      console.log("\n💾 Attempting database INSERT...");
+      console.log("- Table: students");
+      console.log("- Data to insert:", JSON.stringify(studentData, null, 2));
 
       const { data, error } = await supabase
         .from('students')
         .insert([studentData])
         .select();
 
+      // 🔍 DEBUG: 检查数据库操作结果
       if (error) {
+        console.error("\n❌ DATABASE ERROR!");
+        console.error("- Error code:", error.code);
+        console.error("- Error message:", error.message);
+        console.error("- Error details:", error.details);
+        console.error("- Error hint:", error.hint);
+        console.error("- Full error object:", JSON.stringify(error, null, 2));
+        
         if (error.code === '23505') { // Unique constraint violation
+          console.warn("⚠️ Duplicate student detected");
           return res.status(400).json({ error: "该学生已存在" });
         }
         throw error;
       }
+
+      console.log("\n✅ DATABASE INSERT SUCCESSFUL!");
+      console.log("- Returned data:", JSON.stringify(data, null, 2));
+      console.log("- Inserted student count:", data?.length);
+      
       res.json({ success: true, student: data[0] });
     } catch (error: any) {
-      console.error("Add Student Error:", error);
-      res.status(500).json({ error: error.message || "添加学生失败" });
+      console.error("\n💥 ADD STUDENT EXCEPTION!");
+      console.error("- Error type:", error.constructor.name);
+      console.error("- Error message:", error.message);
+      console.error("- Error stack:", error.stack);
+      console.error("- Full error:", JSON.stringify(error, null, 2));
+      
+      res.status(500).json({ 
+        error: error.message || "添加学生失败",
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      });
     }
+    console.log("=== END ADD STUDENT API ===\n");
   });
 
   // API: Update Student
