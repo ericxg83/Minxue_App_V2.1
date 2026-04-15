@@ -2937,6 +2937,10 @@ export default function App() {
                 <div className="space-y-0.5">
                   <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
                     学生档案管理
+                    {/* 🔴 SUPER OBVIOUS MARKER - REMOVE AFTER DEBUGGING */}
+                    <span className="text-xs bg-red-600 text-white px-3 py-1 rounded-full animate-pulse font-bold">
+                      🚀 NEW v2.1 - {new Date().toLocaleTimeString()}
+                    </span>
                     {/* Database Status Indicator */}
                     {dbStatus !== 'unknown' && (
                       <span className={`text-[10px] px-2 py-1 rounded-full ${
