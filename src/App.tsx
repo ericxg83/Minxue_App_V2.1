@@ -249,6 +249,10 @@ export default function App() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [konvaImage] = useImage(image || '');
+  
+  // ✅ NEW: Database connection status
+  const [dbStatus, setDbStatus] = useState<'connected' | 'mock' | 'unknown'>('unknown');
+  const [dbMessage, setDbMessage] = useState('');
 
   const fetchStudents = () => {
     fetch('/api/students')
@@ -256,8 +260,27 @@ export default function App() {
       .then(data => {
         setStudents(data);
         if (data.length > 0 && !selectedStudent) setSelectedStudent(data[0].name);
+        
+        // 🔍 Check if data is from database or mock
+        // Mock data usually has IDs like timestamps (e.g., "1713000000000")
+        // Real database data usually has UUIDs or shorter IDs
+        if (data.length > 0) {
+          const firstStudent = data[0];
+          const isMockData = firstStudent.id && firstStudent.id.toString().length > 10;
+          if (isMockData) {
+            setDbStatus('mock');
+            setDbMessage('⚠️ 当前使用 Mock 模式，数据不会持久化');
+          } else {
+            setDbStatus('connected');
+            setDbMessage('✅ 已连接到数据库');
+          }
+        }
       })
-      .catch(err => console.error("Failed to fetch students", err));
+      .catch(err => {
+        console.error("Failed to fetch students", err);
+        setDbStatus('error');
+        setDbMessage('❌ 数据库连接失败');
+      });
   };
 
   const [subjects, setSubjects] = useState<string[]>(['数学', '语文', '英语', '物理', '化学']);
@@ -2914,8 +2937,43 @@ export default function App() {
                 <div className="space-y-0.5">
                   <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
                     学生档案管理
+                    {/* Database Status Indicator */}
+                    {dbStatus !== 'unknown' && (
+                      <span className={`text-[10px] px-2 py-1 rounded-full ${
+                        dbStatus === 'connected' 
+                          ? 'bg-green-100 text-green-700 border border-green-200' 
+                          : dbStatus === 'mock'
+                          ? 'bg-yellow-100 text-yellow-700 border border-yellow-200 animate-pulse'
+                          : 'bg-red-100 text-red-700 border border-red-200'
+                      }`}>
+                        {dbMessage}
+                      </span>
+                    )}
                   </h3>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Student Profiles ({students.length})</p>
+                  
+                  {/* Show detailed status message if in mock mode */}
+                  {dbStatus === 'mock' && (
+                    <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-xl">
+                      <p className="text-xs text-yellow-800 font-medium">⚠️ 数据持久化警告</p>
+                      <ul className="mt-1 ml-4 list-disc text-xs text-yellow-700 space-y-1">
+                        <li>当前数据存储在内存中，刷新后将丢失</li>
+                        <li>原因：Supabase 数据库连接失败或未配置</li>
+                        <li><strong>解决方案</strong>：请在 Vercel 配置环境变量 SUPABASE_URL 和 SUPABASE_ANON_KEY</li>
+                      </ul>
+                      <button 
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            `SUPABASE_URL=https://bedphahmxdpnzwvsnjay.supabase.co\nSUPABASE_ANON_KEY=sb_publishable_Az5Yk8dG6elDjm4QWkc1cw_sMLOne4t`
+                          );
+                          alert('环境变量信息已复制到剪贴板！\n\n请前往 Vercel Dashboard → Settings → Environment Variables 粘贴配置');
+                        }}
+                        className="mt-2 w-full text-xs bg-yellow-600 text-white py-2 px-3 rounded-lg hover:bg-yellow-700 transition-colors"
+                      >
+                        📋 复制环境变量配置
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <button 
                   onClick={() => {
