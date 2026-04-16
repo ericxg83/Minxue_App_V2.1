@@ -3,15 +3,14 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "functions": {
-    "api/vercel.ts": {
-      "maxDuration": 60,
-      "runtime": "@vercel/node"
+    "api/vercel.js": {
+      "maxDuration": 60
     }
   },
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/vercel.ts"
+      "dest": "/api/vercel.js"
     },
     {
       "src": "/assets/(.*)",
