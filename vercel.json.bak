@@ -19,5 +19,10 @@
       "src": "/(.*)",
       "dest": "index.html"
     }
-  ]
+  ],
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
+  }
 }

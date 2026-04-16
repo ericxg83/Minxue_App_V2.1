@@ -306,10 +306,10 @@ app.get("/api/students", async (req, res) => {
       return res.json(mockStudents);
     }
 
-    console.log("\n💾 Querying database: SELECT * FROM students");
+    console.log("\n💾 Querying database: SELECT specific columns FROM students");
     const { data, error } = await supabase
       .from('students')
-      .select('*');
+      .select('id, name, grade, semester, parentName, contact, avatar');
     
     if (error) {
       console.error("❌ Database query error:", error.message);
@@ -386,7 +386,7 @@ app.post("/api/students", async (req, res) => {
       const { data, error } = await supabase
         .from('students')
         .insert([studentData])
-        .select();
+        .select('id, name, grade, semester, parentName, contact, avatar');
 
       // 🔍 DEBUG: 检查数据库操作结果
       if (error) {
@@ -443,7 +443,7 @@ app.post("/api/students", async (req, res) => {
         .from('students')
         .update(studentData)
         .eq('id', id)
-        .select();
+        .select('id, name, grade, semester, parentName, contact, avatar');
 
       if (error) throw error;
       res.json({ success: true, student: data[0] });
