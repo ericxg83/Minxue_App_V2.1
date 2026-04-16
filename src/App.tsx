@@ -3013,7 +3013,7 @@ export default function App() {
                       : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(s.name || 'default')}`;
                     
                     return (
-                  <div key={s.id} className="bg-white rounded-[2rem] p-4 border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-100 hover:shadow-md transition-all">
+                      <div key={s.id} className="bg-white rounded-[2rem] p-4 border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-100 hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-blue-50 shadow-sm bg-gray-100 flex-shrink-0">
                         <img 
@@ -3072,7 +3072,8 @@ export default function App() {
                       </button>
                     </div>
                   </div>
-                ))}
+                );
+              })}
                 
                 {students.length === 0 && (
                   <div className="py-12 text-center space-y-3 bg-gray-50/50 rounded-[2.5rem] border border-dashed border-gray-200">
