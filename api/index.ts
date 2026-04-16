@@ -2,6 +2,7 @@ import express from "express";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import sharp from "sharp";
+import { checkEnvAndConnection } from "./debug";
 
 // 裁剪图片函数
 async function cropImage(base64Image: string, box: { x: number; y: number; width: number; height: number }): Promise<string> {
@@ -1622,6 +1623,9 @@ app.post("/api/students", async (req, res) => {
       res.status(500).json({ error: error.message || "生成PDF失败" });
     }
   });
+
+  // Debug endpoint - Check environment and Supabase connection
+  app.get("/api/debug", checkEnvAndConnection);
 
   // 导出默认处理函数，用于 Vercel 部署
 export default app;
