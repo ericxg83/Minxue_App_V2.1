@@ -47,67 +47,43 @@ async function cropImage(base64Image: string, box: { x: number; y: number; width
   }
 }
 
-dotenv.config();
+// Supabase Configuration - 直接从环境变量读取
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-// API Keys from environment
-const qwenApiKey = process.env.QWEN_API_KEY || "sk-eac147ed202f4b93ba561c4a6e324874";
+// Qwen API Configuration
+const qwenApiKey = process.env.QWEN_API_KEY;
 const qwenModelId = process.env.QWEN_MODEL_ID || "qwen-vl-plus";
-const qwenEndpoint = process.env.QWEN_ENDPOINT || "https://api-inference.modelscope.cn/v1/chat/completions";
-
-// Supabase Client
-const supabaseUrl = process.env.SUPABASE_URL || "https://bedphahmxdpnzwvsnjay.supabase.co";
-const supabaseKey = process.env.SUPABASE_ANON_KEY || "sb_publishable_Az5Yk8dG6elDjm4QWkc1cw_sMLOne4t";
+const qwenEndpoint = process.env.QWEN_ENDPOINT || "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
-console.log("=== SUPABASE CONFIGURATION DEBUG ===");
+console.log("=== ENVIRONMENT VARIABLES DEBUG ===");
 console.log("Environment:", process.env.NODE_ENV || "development");
-console.log("SUPABASE_URL:", supabaseUrl);
+console.log("SUPABASE_URL present:", !!supabaseUrl);
+console.log("SUPABASE_URL:", supabaseUrl ? `${supabaseUrl.substring(0, 25)}...` : "undefined");
 console.log("SUPABASE_ANON_KEY present:", !!supabaseKey);
-console.log("SUPABASE_ANON_KEY length:", supabaseKey?.length);
-console.log("SUPABASE_ANON_KEY prefix:", supabaseKey?.substring(0, 10) + "...");
+console.log("SUPABASE_ANON_KEY length:", supabaseKey?.length || 0);
+console.log("QWEN_API_KEY present:", !!qwenApiKey);
+console.log("QWEN_MODEL_ID:", qwenModelId);
+console.log("QWEN_ENDPOINT:", qwenEndpoint);
 console.log("=====================================");
 
-// Check if credentials are valid and not placeholders
-const isValidConfig = (url?: string, key?: string) => {
-  console.log("[isValidConfig] Checking credentials...");
-  console.log("[isValidConfig] URL provided:", !!url);
-  console.log("[isValidConfig] Key provided:", !!key);
-  
-  if (!url || !key) {
-    console.warn("[isValidConfig] ❌ Missing URL or Key");
-    return false;
-  }
-  if (url.includes("YOUR_SUPABASE_URL") || key.includes("YOUR_SUPABASE_ANON_KEY")) {
-    console.warn("[isValidConfig] ❌ Placeholder values detected");
-    return false;
-  }
-  if (!url.startsWith("https://")) {
-    console.warn("[isValidConfig] ❌ URL not HTTPS");
-    return false;
-  }
-  
-  // ✅ FIX: 放宽验证逻辑，允许非标准格式的 key
-  // 只要 key 存在且长度合理就认为是有效的
-  if (key.length < 20) {
-    console.warn("[isValidConfig] ❌ Key too short");
-    return false;
-  }
-  
-  console.log("[isValidConfig] ✅ Credentials appear valid");
-  return true;
-};
-
 // 全局变量，供所有函数访问
-let supabase = isValidConfig(supabaseUrl, supabaseKey) 
-  ? createClient(supabaseUrl!, supabaseKey!) 
-  : null;
+let supabase: any = null;
 
-if (!supabase && (supabaseUrl || supabaseKey)) {
-  console.error("⚠️ Supabase client initialization FAILED!");
+// 只有当环境变量存在时才初始化 Supabase 客户端
+if (supabaseUrl && supabaseKey) {
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey);
+    console.log("✅ Supabase client initialized successfully");
+  } catch (error) {
+    console.error("❌ Supabase client initialization FAILED:", error);
+    console.error("⚠️ Falling back to MOCK mode - DATA WILL NOT PERSIST!");
+  }
+} else {
+  console.error("⚠️ SUPABASE_URL or SUPABASE_ANON_KEY not provided!");
   console.error("⚠️ Falling back to MOCK mode - DATA WILL NOT PERSIST!");
-  console.error("⚠️ Check your SUPABASE_URL and SUPABASE_ANON_KEY environment variables");
-} else if (supabase) {
-  console.log("✅ Supabase client initialized successfully");
+  console.error("⚠️ Please set environment variables in Vercel dashboard");
 }
 
 // 打印任务存储
