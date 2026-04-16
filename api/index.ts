@@ -57,16 +57,18 @@ const qwenModelId = process.env.QWEN_MODEL_ID || "qwen-vl-plus";
 const qwenEndpoint = process.env.QWEN_ENDPOINT || "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
+console.log("\n" + "=".repeat(50));
 console.log("=== ENVIRONMENT VARIABLES DEBUG ===");
-console.log("Environment:", process.env.NODE_ENV || "development");
+console.log("=".repeat(50));
+console.log("Environment:", process.env.NODE_ENV || "production");
 console.log("SUPABASE_URL present:", !!supabaseUrl);
-console.log("SUPABASE_URL:", supabaseUrl ? `${supabaseUrl.substring(0, 25)}...` : "undefined");
+console.log("SUPABASE_URL:", supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : "undefined");
 console.log("SUPABASE_ANON_KEY present:", !!supabaseKey);
 console.log("SUPABASE_ANON_KEY length:", supabaseKey?.length || 0);
 console.log("QWEN_API_KEY present:", !!qwenApiKey);
 console.log("QWEN_MODEL_ID:", qwenModelId);
 console.log("QWEN_ENDPOINT:", qwenEndpoint);
-console.log("=====================================");
+console.log("=".repeat(50) + "\n");
 
 // 全局变量，供所有函数访问
 let supabase: any = null;
@@ -74,10 +76,12 @@ let supabase: any = null;
 // 只有当环境变量存在时才初始化 Supabase 客户端
 if (supabaseUrl && supabaseKey) {
   try {
+    console.log("🔧 Initializing Supabase client...");
     supabase = createClient(supabaseUrl, supabaseKey);
     console.log("✅ Supabase client initialized successfully");
-  } catch (error) {
-    console.error("❌ Supabase client initialization FAILED:", error);
+    console.log("🔗 Supabase URL:", supabaseUrl);
+  } catch (error: any) {
+    console.error("❌ Supabase client initialization FAILED:", error.message);
     console.error("⚠️ Falling back to MOCK mode - DATA WILL NOT PERSIST!");
   }
 } else {
