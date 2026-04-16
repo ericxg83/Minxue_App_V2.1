@@ -3,11 +3,12 @@
  */
 
 import { Request, Response } from 'express';
+import { createClient } from '@supabase/supabase-js';
 
 export async function checkEnvAndConnection(req: Request, res: Response) {
   console.log("\n=== 🔍 DEBUG ENDPOINT CALLED ===");
   
-  const debugInfo = {
+  const debugInfo: any = {
     timestamp: new Date().toISOString(),
     environment: {
       SUPABASE_URL_present: !!process.env.SUPABASE_URL,
@@ -25,8 +26,6 @@ export async function checkEnvAndConnection(req: Request, res: Response) {
 
   // Try to test Supabase connection
   try {
-    const { createClient } = await import('@supabase/supabase-js');
-    
     if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
       const testClient = createClient(
         process.env.SUPABASE_URL,
@@ -50,7 +49,8 @@ export async function checkEnvAndConnection(req: Request, res: Response) {
       debugInfo.supabase.error = 'Missing environment variables';
     }
   } catch (error: any) {
-    debugInfo.supabase.error = error.message;
+    debugInfo.supabase.error = error.message || 'Unknown error';
+    console.error("Debug endpoint error:", error);
   }
 
   console.log("Debug Info:", JSON.stringify(debugInfo, null, 2));
