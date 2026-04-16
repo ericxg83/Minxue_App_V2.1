@@ -2935,15 +2935,13 @@ export default function App() {
             <section className="space-y-6">
               <div className="flex items-center justify-between">
                 <div className="space-y-0.5">
-                  <h3 className="text-sm font-black text-gray-800 flex items-center gap-2">
-                    学生档案管理
-                    {/* 🔴 SUPER OBVIOUS MARKER - REMOVE AFTER DEBUGGING */}
-                    <span className="text-xs bg-red-600 text-white px-3 py-1 rounded-full animate-pulse font-bold">
-                      🚀 NEW v2.1 - {new Date().toLocaleTimeString()}
-                    </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-sm font-black text-gray-800">
+                      学生档案管理
+                    </h3>
                     {/* Database Status Indicator */}
                     {dbStatus !== 'unknown' && (
-                      <span className={`text-[10px] px-2 py-1 rounded-full ${
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap ${
                         dbStatus === 'connected' 
                           ? 'bg-green-100 text-green-700 border border-green-200' 
                           : dbStatus === 'mock'
@@ -2953,7 +2951,7 @@ export default function App() {
                         {dbMessage}
                       </span>
                     )}
-                  </h3>
+                  </div>
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Student Profiles ({students.length})</p>
                   
                   {/* Show detailed status message if in mock mode */}
@@ -3008,11 +3006,25 @@ export default function App() {
                     s.name.toLowerCase().includes(studentSearchTerm.toLowerCase()) || 
                     s.grade.toLowerCase().includes(studentSearchTerm.toLowerCase())
                   )
-                  .map((s) => (
+                  .map((s) => {
+                    // 确保头像URL有效，如果无效则使用默认头像
+                    const avatarUrl = s.avatar && s.avatar.startsWith('http') 
+                      ? s.avatar 
+                      : `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(s.name || 'default')}`;
+                    
+                    return (
                   <div key={s.id} className="bg-white rounded-[2rem] p-4 border border-gray-100 shadow-sm flex items-center justify-between group hover:border-blue-100 hover:shadow-md transition-all">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-blue-50 shadow-sm">
-                        <img src={s.avatar} alt={s.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <div className="w-12 h-12 rounded-2xl overflow-hidden border-2 border-blue-50 shadow-sm bg-gray-100 flex-shrink-0">
+                        <img 
+                          src={avatarUrl} 
+                          alt={s.name} 
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            // 如果图片加载失败，使用默认头像
+                            (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(s.name || 'default')}`;
+                          }}
+                        />
                       </div>
                       <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
