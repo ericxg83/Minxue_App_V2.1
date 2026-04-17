@@ -774,21 +774,15 @@ export default function App() {
         } else {
           console.log("✅ Student added successfully");
           
-          // ✅ FIX: 成功后重新获取最新列表，确保数据一致性
-          try {
-            const listRes = await fetch('/api/students');
-            const newList = await listRes.json();
-            if (listRes.ok && Array.isArray(newList)) {
-              console.log("📚 Refreshed student list from server:", newList.length, "students");
-              setStudents(newList);
-            } else {
-              // 如果刷新失败，使用后端返回的数据
-              setStudents(prev => [...prev, data.student]);
-            }
-          } catch (refreshErr) {
-            console.error("Failed to refresh list, using local update:", refreshErr);
-            setStudents(prev => [...prev, data.student]);
-          }
+          // ✅ FIX: 直接使用后端返回的数据更新UI，确保立即显示
+          setStudents(prev => [...prev, data.student]);
+          console.log("📚 Added student to local list:", data.student.name);
+          
+          // 然后异步刷新完整列表（确保数据一致性）
+          setTimeout(() => {
+            console.log("🔄 Refreshing student list from server...");
+            fetchStudents();
+          }, 100);
           
           if (!selectedStudent) setSelectedStudent(data.student.name);
         }
