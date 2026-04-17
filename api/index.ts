@@ -407,7 +407,23 @@ app.post("/api/students", async (req, res) => {
       console.log("- Returned data:", JSON.stringify(data, null, 2));
       console.log("- Inserted student count:", data?.length);
       
-      res.json({ success: true, student: data[0] });
+      // 🔧 FIX: 立即查询数据库验证数据是否真的写入
+      console.log("\n🔍 Verifying data in database...");
+      const { data: verifyData, error: verifyError } = await supabase
+        .from('students')
+        .select('id, name, grade, semester, parentName, contact, avatar')
+        .eq('name', insertData.name)
+        .single();
+      
+      if (verifyError) {
+        console.warn("⚠️ Verification query failed:", verifyError.message);
+      } else if (verifyData) {
+        console.log("✅ Data verified in database:", verifyData.name);
+      } else {
+        console.warn("⚠️ Data not found in database immediately after insert!");
+      }
+      
+      res.json({ success: true, student: data[0] || verifyData });
     } catch (error: any) {
       console.error("\n💥 ADD STUDENT EXCEPTION!");
       console.error("- Error type:", error.constructor.name);
