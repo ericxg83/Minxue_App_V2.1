@@ -953,9 +953,11 @@ export default function App() {
             });
             
             if (!res.ok) {
-              throw new Error('识别失败');
+              const errorData = await res.json().catch(() => ({ error: '未知错误' }));
+              console.error('识别 API 错误:', errorData);
+              throw new Error(errorData.error || `识别失败 (${res.status})`);
             }
-            
+
             const data = await res.json();
             
             // 处理后端返回的数据格式
@@ -1005,7 +1007,9 @@ export default function App() {
                       questionImage: croppedImage,  // 裁剪后的题目图片
                       originalImage: q.originalImage || q.image || q.imageUrl || '',  // 原图（用于小眼睛查看裁剪图块）
                       box: q.box,  // 裁剪框信息
-                      time: new Date().toISOString()
+                      time: new Date().toISOString(),
+                      options: q.options || [],  // 选项列表
+                      stem: q.stem || ''  // 题干
                     })
                   });
                   
@@ -1124,11 +1128,13 @@ export default function App() {
             });
             
             if (!res.ok) {
-              throw new Error('识别失败');
+              const errorData = await res.json().catch(() => ({ error: '未知错误' }));
+              console.error('识别 API 错误:', errorData);
+              throw new Error(errorData.error || `识别失败 (${res.status})`);
             }
-            
+
             const data = await res.json();
-            
+
             // 处理后端返回的数据格式
             let questionsData = [];
             if (Array.isArray(data)) {
@@ -1176,7 +1182,9 @@ export default function App() {
                       questionImage: croppedImage,  // 裁剪后的题目图片
                       originalImage: q.originalImage || q.image || q.imageUrl || '',  // 原图（用于小眼睛查看裁剪图块）
                       box: q.box,  // 裁剪框信息
-                      time: new Date().toISOString()
+                      time: new Date().toISOString(),
+                      options: q.options || [],  // 选项列表
+                      stem: q.stem || ''  // 题干
                     })
                   });
                   
@@ -1368,7 +1376,9 @@ export default function App() {
               questionImage: croppedImage,  // 裁剪后的题目图片
               originalImage: image,  // 原图（用于小眼睛查看裁剪图块）
               box: q.box,  // 裁剪框信息
-              time: new Date().toISOString()
+              time: new Date().toISOString(),
+              options: q.options || [],  // 选项列表
+              stem: q.stem || ''  // 题干
             })
           });
           const data = await res.json();
@@ -1858,7 +1868,18 @@ export default function App() {
                                           }}
                                         />
                                       </div>
-                                      <p className="text-sm text-gray-700 line-clamp-2">{q.text || '未识别到文字'}</p>
+                                      {/* 题干 */}
+                                      <p className="text-sm text-gray-700 line-clamp-2">{q.stem || q.text?.split(/(?=[A-D][\.．])/)[0] || q.text || '未识别到文字'}</p>
+                                      {/* 选项 */}
+                                      {q.options && q.options.length > 0 && (
+                                        <div className="grid grid-cols-2 gap-1 mt-1">
+                                          {q.options.map((opt: string, i: number) => (
+                                            <div key={i} className="text-xs text-gray-500 truncate">
+                                              {opt.trim()}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                   ))}
                                 </div>
@@ -1926,7 +1947,9 @@ export default function App() {
                                     questionImage: croppedImage,  // 裁剪后的题目图片
                                     originalImage: imageUrl,  // 原图（用于小眼睛查看裁剪图块）
                                     box: q.box,  // 裁剪框信息
-                                    time: new Date().toISOString()
+                                    time: new Date().toISOString(),
+                                    options: q.options || [],  // 选项列表
+                                    stem: q.stem || ''  // 题干
                                   })
                                 });
                                 const data = await res.json();
@@ -2236,57 +2259,24 @@ export default function App() {
                           {/* 顶部：题目文字和编辑按钮 */}
                           <div className="flex items-start justify-between">
                             <div className="flex-1 text-sm text-gray-800 leading-relaxed font-medium pr-2">
+                              {/* 题干 - 可折叠 */}
                               <div className={cn(
                                 "whitespace-pre-wrap",
                                 !expandedCardId || expandedCardId !== item.id ? "line-clamp-3" : ""
                               )}>
-                                {isPrintMode ? (
-                                  <>
-                                    {(() => {
-                                      // 确保处理了所有可能的空格和中英文标点
-                                      const fullText = item.text || "";
-                                      if (!fullText) return null;
-                                      
-                                      // 拆分逻辑
-                                      const parts = fullText.split(/(?=[A-D][\.．])/);
-                                      const stem = parts[0];
-                                      const options = parts.slice(1);
-                                      
-                                      // 打印 options 结构
-                                      console.log("OPTIONS:", options);
-                                      
-                                      if (options.length > 0) {
-                                        return (
-                                          <div className="mb-8 text-[14px] leading-relaxed break-inside-avoid">
-                                            {/* 题干 */}
-                                            <div className="mb-4 w-full text-[16px]">
-                                              {stem}
-                                            </div>
-                                            
-                                            {/* 选项：强制 4 列横排 */}
-                                            <div className="grid grid-cols-4 gap-2 print:grid-cols-4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)' }}>
-                                              {options.map((opt, i) => (
-                                                <div key={i} className="whitespace-normal">
-                                                  {opt.trim()}
-                                                </div>
-                                              ))}
-                                            </div>
-                                          </div>
-                                        );
-                                      }
-                                      return (
-                                        <div className="mb-8 text-[14px] leading-relaxed break-inside-avoid">
-                                          <div className="mb-4 w-full text-[16px]">
-                                            {fullText}
-                                          </div>
-                                        </div>
-                                      );
-                                    })()}
-                                  </>
-                                ) : (
-                                  item.text.replace(/([A-D][\.、])/g, ' $1')
-                                )}
+                                {item.question || item.text.replace(/([A-D][\.、])/g, ' $1')}
                               </div>
+                              
+                              {/* 选项：始终显示，不受折叠影响 */}
+                              {item.options && item.options.length > 0 && (
+                                <div className="grid grid-cols-2 gap-2 mt-3">
+                                  {item.options.map((opt, i) => (
+                                    <div key={i} className="text-sm text-gray-600 bg-gray-50 px-2 py-1 rounded">
+                                      {opt.trim()}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                               {!expandedCardId || expandedCardId !== item.id ? (
                                 <button 
                                   onClick={(e) => {
@@ -2495,7 +2485,18 @@ export default function App() {
                                       </div>
                                     </div>
                                     <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                                      <p className="text-sm text-gray-700 whitespace-pre-wrap">{q.text || '未识别到文字'}</p>
+                                      {/* 题干 */}
+                                      <p className="text-sm text-gray-700 whitespace-pre-wrap mb-2">{q.stem || q.text?.split(/(?=[A-D][\.．])/)[0] || q.text || '未识别到文字'}</p>
+                                      {/* 选项 */}
+                                      {q.options && q.options.length > 0 && (
+                                        <div className="grid grid-cols-2 gap-2 mt-2">
+                                          {q.options.map((opt: string, i: number) => (
+                                            <div key={i} className="text-sm text-gray-600 bg-white px-2 py-1 rounded">
+                                              {opt.trim()}
+                                            </div>
+                                          ))}
+                                        </div>
+                                      )}
                                     </div>
                                     {/* 题目截图 */}
                                     {q.imageUrl && (
@@ -2573,7 +2574,9 @@ export default function App() {
                                                   questionImage: croppedImage,  // 裁剪后的题目图片
                                                   originalImage: imageUrl || '',  // 原图（用于小眼睛查看裁剪图块）
                                                   box: q.box,  // 裁剪框信息
-                                                  time: new Date().toISOString()
+                                                  time: new Date().toISOString(),
+                                                  options: q.options || [],  // 选项列表
+                                                  stem: q.stem || ''  // 题干
                                                 })
                                               });
                                               
@@ -2646,13 +2649,15 @@ export default function App() {
                                       headers: { 'Content-Type': 'application/json' },
                                       body: JSON.stringify({ base64Image: compressedBase64 })
                                     });
-                                    
+
                                     if (!res.ok) {
-                                      throw new Error('识别失败');
+                                      const errorData = await res.json().catch(() => ({ error: '未知错误' }));
+                                      console.error('识别 API 错误:', errorData);
+                                      throw new Error(errorData.error || `识别失败 (${res.status})`);
                                     }
-                                    
+
                                     const data = await res.json();
-                                    
+
                                     // 处理后端返回的数据格式
                                     let questionsData = [];
                                     if (Array.isArray(data)) {
@@ -3252,7 +3257,55 @@ export default function App() {
                   <div className="flex-1 pt-1">
                     <div className="mb-8 text-[14px] leading-relaxed break-inside-avoid">
                       {(() => {
-                        // 确保处理了所有可能的空格和中英文标点
+                        // 优先使用后端返回的 options 字段
+                        if (item.options && item.options.length > 0) {
+                          const stem = item.question || item.text.split(/(?=[A-D][\.．]/)[0];
+                          const options = item.options;
+                          
+                          // 检查选项是否包含换行符（字数多）
+                          const hasLineBreaks = options.some((opt: string) => opt.includes('\n'));
+                          
+                          // 计算选项的平均长度
+                          const avgLength = options.reduce((sum: number, opt: string) => sum + opt.length, 0) / options.length;
+                          
+                          // 根据是否包含换行符和平均长度决定列数
+                          let columns = 4; // 默认一行四个选项
+                          if (hasLineBreaks || avgLength > 25) {
+                            columns = 1; // 任何一个选项包含换行符或字数多，所有选项都一行一个
+                          } else if (avgLength > 15) {
+                            columns = 2; // 字数适中，一行两个选项
+                          }
+                          
+                          return (
+                            <>
+                              {/* 题干 */}
+                              <div className="mb-4 w-full text-[16px]">
+                                <ReactMarkdown 
+                                  remarkPlugins={[remarkMath]} 
+                                  rehypePlugins={[rehypeKatex]}
+                                >
+                                  {stem}
+                                </ReactMarkdown>
+                              </div>
+                              
+                              {/* 选项：根据内容自动调整列数 */}
+                              <div className={`grid gap-2 print:grid-cols-${columns}`} style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)` }}>
+                                {options.map((opt: string, i: number) => (
+                                  <div key={i} className="whitespace-normal">
+                                    <ReactMarkdown 
+                                      remarkPlugins={[remarkMath]} 
+                                      rehypePlugins={[rehypeKatex]}
+                                    >
+                                      {opt.trim()}
+                                    </ReactMarkdown>
+                                  </div>
+                                ))}
+                              </div>
+                            </>
+                          );
+                        }
+                        
+                        // 兼容旧数据：从 text 中解析选项
                         const fullText = item.text || "";
                         if (!fullText) return null;
                         
@@ -3260,9 +3313,6 @@ export default function App() {
                         const parts = fullText.split(/(?=[A-D][\.．])/);
                         const stem = parts[0];
                         const options = parts.slice(1);
-                        
-                        // 打印 options 结构
-                        console.log("OPTIONS:", options);
                         
                         if (options.length > 0) {
                           // 检查选项是否包含换行符（字数多）

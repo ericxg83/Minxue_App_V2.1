@@ -52,9 +52,9 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 // Qwen API Configuration
-const qwenApiKey = process.env.QWEN_API_KEY;
-const qwenModelId = process.env.QWEN_MODEL_ID || "qwen-vl-plus";
-const qwenEndpoint = process.env.QWEN_ENDPOINT || "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+const qwenApiKey = process.env.QWEN_API_KEY || process.env.MODELSCOPE_API_KEY;
+const qwenModelId = process.env.QWEN_MODEL_ID || process.env.MODELSCOPE_MODEL_ID || "Qwen/Qwen2.5-VL-72B-Instruct";
+const qwenEndpoint = process.env.QWEN_ENDPOINT || process.env.MODELSCOPE_ENDPOINT || "https://api-inference.modelscope.cn/v1/chat/completions";
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
 console.log("\n" + "=".repeat(60));
@@ -66,6 +66,9 @@ console.log("SUPABASE_URL value:", supabaseUrl || "NOT SET");
 console.log("SUPABASE_ANON_KEY present:", !!supabaseKey);
 console.log("SUPABASE_ANON_KEY length:", supabaseKey?.length || 0);
 console.log("SUPABASE_ANON_KEY preview:", supabaseKey ? `${supabaseKey.substring(0, 20)}...` : "NOT SET");
+console.log("QWEN_API_KEY present:", !!qwenApiKey);
+console.log("QWEN_MODEL_ID:", qwenModelId);
+console.log("QWEN_ENDPOINT:", qwenEndpoint);
 console.log("=".repeat(60) + "\n");
 
 // 全局变量，供所有函数访问
@@ -106,7 +109,10 @@ let mockDb: any[] = [
   { id: '3', student: '雷雨泽', subject: '数学', text: 'Calculate: 2x + 5 = 15, find x', imageUrl: 'https://picsum.photos/seed/math2/800/600', questionImage: 'https://picsum.photos/seed/math3/400/300', originalImage: 'https://picsum.photos/seed/math2/800/600', box: { x: 15, y: 15, width: 70, height: 35 }, time: '2024-04-02 10:00', status: 'pending' },
   { id: '4', student: '雷雨泽', subject: '语文', text: '阅读理解：春天的景色', imageUrl: 'https://picsum.photos/seed/chinese/800/600', questionImage: 'https://picsum.photos/seed/chinese1/400/300', originalImage: 'https://picsum.photos/seed/chinese/800/600', box: { x: 12, y: 12, width: 76, height: 40 }, time: '2024-04-02 11:00', status: 'pending' },
   { id: '5', student: '雷雨泽', subject: '数学', text: '6. 如图,网格点上三点 A,B,C 在某平面直角坐标系中的坐标分别为 (a,b),(c,d),(a+c,b+d),则下列判断错误的是 A. a<0 B. b=2d C. a+c=b+d D. a+b+d=c', imageUrl: 'https://picsum.photos/seed/math4/800/600', questionImage: 'https://picsum.photos/seed/math5/400/300', originalImage: 'https://picsum.photos/seed/math4/800/600', box: { x: 10.2, y: 99.2, width: 85.6, height: 18.5 }, time: '2024-04-10 10:00', status: 'pending' },
-  { id: '6', student: '雷雨泽', subject: '数学', text: '3. 在平面直角坐标系中,下列说法正确的是 A. 若点 M(-2,a)与点 N(x,a)之间的距离是 1,则 x 的值是 -1 B. 若 m≠0,则点 (-2,m²)一定在第四象限 C. 若点 P 到 x 轴和 y 轴的距离均为 2,则符合条件的点 P 有 4 个 D. 已知点 A(4,5), B(-5,5),则 AB⊥y 轴', imageUrl: 'https://picsum.photos/seed/math6/800/600', questionImage: 'https://picsum.photos/seed/math7/400/300', originalImage: 'https://picsum.photos/seed/math6/800/600', box: { x: 10.2, y: 49.2, width: 85.6, height: 13.5 }, time: '2024-04-10 11:00', status: 'pending' }
+  { id: '6', student: '雷雨泽', subject: '数学', text: '3. 在平面直角坐标系中,下列说法正确的是 A. 若点 M(-2,a)与点 N(x,a)之间的距离是 1,则 x 的值是 -1 B. 若 m≠0,则点 (-2,m²)一定在第四象限 C. 若点 P 到 x 轴和 y 轴的距离均为 2,则符合条件的点 P 有 4 个 D. 已知点 A(4,5), B(-5,5),则 AB⊥y 轴', imageUrl: 'https://picsum.photos/seed/math6/800/600', questionImage: 'https://picsum.photos/seed/math7/400/300', originalImage: 'https://picsum.photos/seed/math6/800/600', box: { x: 10.2, y: 49.2, width: 85.6, height: 13.5 }, time: '2024-04-10 11:00', status: 'pending' },
+  // 袁怡希的测试数据
+  { id: '7', student: '袁怡希', subject: '数学', text: '4. 若点 A(a+2,a²-4)在坐标轴上,则点 A 的坐标为 A.(0,0) B.(4,0) C.(0,', imageUrl: 'https://picsum.photos/seed/yuan1/800/600', questionImage: 'https://picsum.photos/seed/yuan1q/400/300', originalImage: 'https://picsum.photos/seed/yuan1/800/600', box: { x: 10, y: 10, width: 80, height: 30 }, time: '2024-04-15 10:00', status: 'pending', options: ['A.(0,0)', 'B.(4,0)', 'C.(0,'], stem: '4. 若点 A(a+2,a²-4)在坐标轴上,则点 A 的坐标为' },
+  { id: '8', student: '袁怡希', subject: '数学', text: '2. 在平面直角坐标系内,已知点A(m,0)、B(0,-3),且 AB=5,那么m的值是 A.-4 B.2 C.4 D.4或-', imageUrl: 'https://picsum.photos/seed/yuan2/800/600', questionImage: 'https://picsum.photos/seed/yuan2q/400/300', originalImage: 'https://picsum.photos/seed/yuan2/800/600', box: { x: 10, y: 50, width: 80, height: 30 }, time: '2024-04-15 11:00', status: 'pending', options: ['A.-4', 'B.2', 'C.4', 'D.4或-'], stem: '2. 在平面直角坐标系内,已知点A(m,0)、B(0,-3),且 AB=5,那么m的值是' }
 ];
 
 // 定义 OCR 文本行接口
@@ -273,7 +279,8 @@ const mockStudents = [
   { id: 's1', name: "雷雨泽", grade: "八年级", semester: "下学期", parentName: "雷爸爸", contact: "13800138000", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=s1" },
   { id: 's2', name: "周俊辰", grade: "七年级", semester: "下学期", parentName: "周妈妈", contact: "13900139000", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=s2" },
   { id: 's3', name: "张三", grade: "一年级", semester: "下学期", parentName: "张爸爸", contact: "13700137000", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=s3" },
-  { id: 's4', name: "李四", grade: "二年级", semester: "下学期", parentName: "李妈妈", contact: "13600136000", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=s4" }
+  { id: 's4', name: "李四", grade: "二年级", semester: "下学期", parentName: "李妈妈", contact: "13600136000", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=s4" },
+  { id: 's5', name: "袁怡希", grade: "八年级", semester: "下学期", parentName: "袁妈妈", contact: "13500135000", avatar: "https://api.dicebear.com/7.x/avataaars/svg?seed=yuan" }
 ];
 
 app.use(express.json({ limit: '50mb' }));
@@ -288,12 +295,8 @@ app.get("/api/students", async (req, res) => {
     console.log("\n🔌 Supabase Client Status:", !!supabase);
     
     if (!supabase || useMockMode) {
-      console.error("❌ Cannot fetch students: Database not connected");
-      return res.status(503).json({ 
-        error: "Database not connected", 
-        message: "Please check SUPABASE_URL and SUPABASE_ANON_KEY environment variables",
-        mockMode: true
-      });
+      console.log("⚠️ Using mock students data");
+      return res.json(mockStudents);
     }
 
     console.log("\n💾 Querying database: SELECT specific columns FROM students");
@@ -364,12 +367,14 @@ app.post("/api/students", async (req, res) => {
       console.log("- supabase object exists:", !!supabase);
       console.log("- supabase type:", typeof supabase);
       if (!supabase || useMockMode) {
-        console.error("❌ Cannot add student: Database not connected");
-        return res.status(503).json({ 
-          error: "Database not connected", 
-          message: "Please check SUPABASE_URL and SUPABASE_ANON_KEY environment variables",
-          mockMode: true
-        });
+        console.log("⚠️ Using mock mode for adding student");
+        const newStudent = {
+          id: 's' + Date.now(),
+          ...studentData,
+          avatar: studentData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(studentData.name)}`
+        };
+        mockStudents.unshift(newStudent);
+        return res.json({ success: true, student: newStudent });
       }
 
       // ✅ 使用真正的数据库操作
@@ -459,7 +464,7 @@ app.post("/api/students", async (req, res) => {
       const { id } = req.params;
       const studentData = req.body;
 
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         const index = mockStudents.findIndex(s => s.id === id);
         if (index > -1) {
           mockStudents[index] = { ...mockStudents[index], ...studentData };
@@ -1051,19 +1056,19 @@ app.post("/api/students", async (req, res) => {
   // API: Submit Wrong Question
   app.post("/api/submit", async (req, res) => {
     try {
-      const { student, subject, text, imageUrl, questionImage, originalImage, box, time } = req.body;
+      const { student, subject, text, imageUrl, questionImage, originalImage, box, time, options, stem } = req.body;
       const id = Date.now().toString();
       
       // Normalize text for comparison (remove spaces and common punctuation)
       const normalize = (t: string) => t.replace(/[\s\p{P}]/gu, '');
       const normalizedNew = normalize(text || "");
 
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         const exists = mockDb.some(q => q.student === student && normalize(q.text) === normalizedNew);
         if (exists) {
           return res.json({ success: true, id: "duplicate", isDuplicate: true });
         }
-        mockDb.unshift({ id, student, subject, text, imageUrl, questionImage, originalImage, box, time });
+        mockDb.unshift({ id, student, subject, text, imageUrl, questionImage, originalImage, box, time, options, stem });
         return res.json({ success: true, id });
       }
 
@@ -1084,21 +1089,29 @@ app.post("/api/students", async (req, res) => {
       }
 
       // 2. Insert if not duplicate
+      const insertData: any = { 
+        student_name: student, 
+        subject: subject || '未命名试卷', 
+        question_text: text, 
+        image_url: imageUrl, 
+        question_image: questionImage, 
+        original_image: originalImage,
+        box: box,
+        created_at: time ? new Date(time).toISOString() : new Date().toISOString(),
+        status: 'pending'
+      };
+      
+      // 如果有选项数据，也保存到数据库（如果数据库支持）
+      if (options && Array.isArray(options)) {
+        insertData.options = options;
+      }
+      if (stem) {
+        insertData.stem = stem;
+      }
+      
       const { data, error } = await supabase
         .from('wrong_questions')
-        .insert([
-          { 
-            student_name: student, 
-            subject: subject || '未命名试卷', 
-            question_text: text, 
-            image_url: imageUrl, 
-            question_image: questionImage, 
-            original_image: originalImage,
-            box: box,
-            created_at: time ? new Date(time).toISOString() : new Date().toISOString(),
-            status: 'pending'
-          }
-        ])
+        .insert([insertData])
         .select();
 
       if (error) {
@@ -1127,7 +1140,7 @@ app.post("/api/students", async (req, res) => {
       const { student } = req.query;
       if (!student) return res.json({ count: 0 });
       
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         const count = mockDb.filter(row => row.student === student).length;
         return res.json({ count });
       }
@@ -1160,7 +1173,7 @@ app.post("/api/students", async (req, res) => {
       const { student } = req.query;
       if (!student) return res.json([]);
 
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         const history = mockDb.filter(row => row.student === student);
         return res.json(history);
       }
@@ -1188,21 +1201,37 @@ app.post("/api/students", async (req, res) => {
         let questionText = originalText;
         let options: string[] = [];
         
-        // 找到第一个A选项的位置
-        const firstOptionMatch = originalText.match(/\s*[Aa][.．]/);
-        if (firstOptionMatch) {
-          const firstOptionIndex = firstOptionMatch.index || 0;
-          
-          // 分割题干和选项文本
-          questionText = originalText.substring(0, firstOptionIndex).trim();
-          const optionsText = originalText.substring(firstOptionIndex).trim();
-          
-          // 拆分选项
-          const optionRegex = /([A-D][.．]\s*.*?)(?=[A-D][.．]|$)/g;
-          options = optionsText.match(optionRegex) || [];
-          
-          // 清理选项
-          options = options.map(opt => opt.trim());
+        // 优先使用数据库中存储的 options 字段
+        if (row.options && Array.isArray(row.options) && row.options.length > 0) {
+          options = row.options;
+          // 如果有存储的 stem 字段，使用它作为题干
+          if (row.stem) {
+            questionText = row.stem;
+          } else {
+            // 否则从 text 中解析题干
+            const firstOptionMatch = originalText.match(/\s*[Aa][.．]/);
+            if (firstOptionMatch) {
+              questionText = originalText.substring(0, firstOptionMatch.index || 0).trim();
+            }
+          }
+        } else {
+          // 自动从文本中解析选项（兼容旧数据）
+          // 找到第一个A选项的位置
+          const firstOptionMatch = originalText.match(/\s*[Aa][.．]/);
+          if (firstOptionMatch) {
+            const firstOptionIndex = firstOptionMatch.index || 0;
+            
+            // 分割题干和选项文本
+            questionText = originalText.substring(0, firstOptionIndex).trim();
+            const optionsText = originalText.substring(firstOptionIndex).trim();
+            
+            // 拆分选项
+            const optionRegex = /([A-D][.．]\s*.*?)(?=[A-D][.．]|$)/g;
+            options = optionsText.match(optionRegex) || [];
+            
+            // 清理选项
+            options = options.map(opt => opt.trim());
+          }
         }
         
         return {
@@ -1225,7 +1254,7 @@ app.post("/api/students", async (req, res) => {
       });
 
       // 在 Mock 模式下，确保 mockDb 中的题目也包含 answer、explanation、question 和 options 字段
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         mockDb.forEach(item => {
           if (!item.answer) item.answer = '';
           if (!item.explanation) item.explanation = '';
@@ -1271,7 +1300,7 @@ app.post("/api/students", async (req, res) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         const item = mockDb.find(q => q.id === id);
         if (item) item.status = status;
         return res.json({ success: true });
@@ -1297,7 +1326,7 @@ app.post("/api/students", async (req, res) => {
   app.delete("/api/students/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         const index = mockStudents.findIndex(s => s.id === id);
         if (index > -1) mockStudents.splice(index, 1);
         return res.json({ success: true });
@@ -1322,7 +1351,7 @@ app.post("/api/students", async (req, res) => {
   // API: Get Subjects
   app.get("/api/subjects", async (req, res) => {
     try {
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         return res.json(['数学', '语文', '英语', '物理', '化学']);
       }
       const { data, error } = await supabase.from('subjects').select('name');
@@ -1337,7 +1366,7 @@ app.post("/api/students", async (req, res) => {
   app.post("/api/history/:id/practice", async (req, res) => {
     try {
       const { id } = req.params;
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         const item = mockDb.find(q => q.id === id);
         if (item) item.practice_count = (item.practice_count || 0) + 1;
         return res.json({ success: true });
@@ -1368,7 +1397,7 @@ app.post("/api/students", async (req, res) => {
   app.delete("/api/history/:id", async (req, res) => {
     try {
       const { id } = req.params;
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         const index = mockDb.findIndex(q => q.id === id);
         if (index > -1) mockDb.splice(index, 1);
         return res.json({ success: true });
@@ -1405,7 +1434,7 @@ app.post("/api/students", async (req, res) => {
       // Normalize text for comparison (remove spaces and common punctuation)
       const normalize = (t: string) => t.replace(/[\s\p{P}]/gu, '');
 
-      if (!supabase) {
+      if (!supabase || useMockMode) {
         // Mock mode
         const results = [];
         for (const q of questions) {
@@ -1416,13 +1445,15 @@ app.post("/api/students", async (req, res) => {
             results.push({ id: "duplicate", isDuplicate: true });
           } else {
             const id = Date.now().toString() + Math.random().toString(36).substr(2, 9);
-            mockDb.unshift({ 
-              id, 
-              student, 
-              subject: subject || '未命名试卷', 
-              text: q.text || '未识别到文字', 
+            mockDb.unshift({
+              id,
+              student,
+              subject: subject || '未命名试卷',
+              text: q.text || '未识别到文字',
               imageUrl: q.imageUrl,
-              time: time || new Date().toISOString()
+              time: time || new Date().toISOString(),
+              options: q.options || [],
+              stem: q.stem || ''
             });
             results.push({ id, success: true });
           }
@@ -1451,18 +1482,26 @@ app.post("/api/students", async (req, res) => {
           results.push({ id: "duplicate", isDuplicate: true });
         } else {
           // 2. Insert if not duplicate
+          const insertData: any = { 
+            student_name: student, 
+            subject: subject || '未命名试卷', 
+            question_text: q.text || '未识别到文字', 
+            image_url: q.imageUrl,
+            created_at: time ? new Date(time).toISOString() : new Date().toISOString(),
+            status: 'pending'
+          };
+          
+          // 如果有选项数据，也保存到数据库
+          if (q.options && Array.isArray(q.options)) {
+            insertData.options = q.options;
+          }
+          if (q.stem) {
+            insertData.stem = q.stem;
+          }
+          
           const { data, error } = await supabase
             .from('wrong_questions')
-            .insert([
-              { 
-                student_name: student, 
-                subject: subject || '未命名试卷', 
-                question_text: q.text || '未识别到文字', 
-                image_url: q.imageUrl,
-                created_at: time ? new Date(time).toISOString() : new Date().toISOString(),
-                status: 'pending'
-              }
-            ])
+            .insert([insertData])
             .select();
 
           if (error) {
