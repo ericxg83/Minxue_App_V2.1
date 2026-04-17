@@ -297,14 +297,28 @@ app.get("/api/students", async (req, res) => {
     }
 
     console.log("\n💾 Querying database: SELECT specific columns FROM students");
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('students')
       .select('id, name, grade, semester, parentName, contact, avatar');
+    
+    // 🔧 FIX: 如果 parentName 导致错误，尝试不使用该字段
+    if (error && error.message && error.message.includes('parentName')) {
+      console.warn("⚠️ parentName error in query, retrying without parentName...");
+      const retryResult = await supabase
+        .from('students')
+        .select('id, name, grade, semester, contact, avatar');
+      data = retryResult.data;
+      error = retryResult.error;
+    }
     
     if (error) {
       console.error("❌ Database query error:", error.message);
       console.error("- Error details:", JSON.stringify(error, null, 2));
-      return res.json(mockStudents); // Fallback to mock
+      return res.status(500).json({ 
+        error: "Database query failed", 
+        message: error.message,
+        code: error.code
+      });
     }
     
     console.log("✅ Query successful:", data?.length, "students found");
@@ -313,9 +327,12 @@ app.get("/api/students", async (req, res) => {
     }
     
     res.json(data);
-  } catch (error) {
+  } catch (error: any) {
     console.error("💥 Students API Exception:", error);
-    res.json(mockStudents);
+    res.status(500).json({ 
+      error: "Server error", 
+      message: error.message || "Unknown error"
+    });
   }
   console.log("=== END GET STUDENTS API ===\n");
 });
