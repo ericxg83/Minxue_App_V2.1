@@ -3259,7 +3259,7 @@ export default function App() {
                       {(() => {
                         // 优先使用后端返回的 options 字段
                         if (item.options && item.options.length > 0) {
-                          const stem = item.question || item.text.split(/(?=[A-D][\.．]/)[0];
+                          const stem = item.question || item.text.split(/(?=[A-D][\.．])/)[0];
                           const options = item.options;
                           
                           // 检查选项是否包含换行符（字数多）
