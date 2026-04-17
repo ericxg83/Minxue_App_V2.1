@@ -52,9 +52,10 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 // Qwen API Configuration
-const qwenApiKey = process.env.QWEN_API_KEY || process.env.MODELSCOPE_API_KEY;
-const qwenModelId = process.env.QWEN_MODEL_ID || process.env.MODELSCOPE_MODEL_ID || "Qwen/Qwen2.5-VL-72B-Instruct";
-const qwenEndpoint = process.env.QWEN_ENDPOINT || process.env.MODELSCOPE_ENDPOINT || "https://api-inference.modelscope.cn/v1";
+// 优先使用 MODELSCOPE_* 变量，如果没有则使用 QWEN_* 变量
+const qwenApiKey = process.env.MODELSCOPE_API_KEY || process.env.QWEN_API_KEY;
+const qwenModelId = process.env.MODELSCOPE_MODEL_ID || process.env.QWEN_MODEL_ID || "Qwen/Qwen2.5-VL-7B-Instruct";
+const qwenEndpoint = process.env.MODELSCOPE_ENDPOINT || process.env.QWEN_ENDPOINT || "https://api-inference.modelscope.cn/v1";
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
 console.log("\n" + "=".repeat(60));
