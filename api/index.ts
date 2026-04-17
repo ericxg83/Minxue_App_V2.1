@@ -653,6 +653,9 @@ app.post("/api/students", async (req, res) => {
       let response: Response | null = null;
       let lastError: any = null;
 
+      // 检查是否使用 Gemini API
+      const isGemini = qwenEndpoint.includes('generativelanguage.googleapis.com');
+
       while (attempt < maxRetries) {
         try {
           if (attempt > 0) {
@@ -660,33 +663,66 @@ app.post("/api/students", async (req, res) => {
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
 
-          response = await fetch(qwenEndpoint, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${qwenApiKey}`
-            },
-            body: JSON.stringify({
-              model: qwenModelId, 
-              max_tokens: 2000, // 减少最大 tokens，提高响应速度
-              temperature: 0.3, // 降低温度，减少随机性，提高速度
-              messages: [
-                {
-                  role: "user",
-                  content: [
-                    { "type": "text", "text": prompt },
-                    { 
-                      "type": "image_url", 
-                      "image_url": { 
-                        "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}` 
-                      } 
-                    }
-                  ]
+          if (isGemini) {
+            // Gemini API 请求格式
+            const base64Data = base64Image.startsWith('data:') ? base64Image.split(',')[1] : base64Image;
+            
+            response = await fetch(qwenEndpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${qwenApiKey}`
+              },
+              body: JSON.stringify({
+                contents: [
+                  {
+                    parts: [
+                      { "text": prompt },
+                      {
+                        inline_data: {
+                          mime_type: "image/jpeg",
+                          data: base64Data
+                        }
+                      }
+                    ]
+                  }
+                ],
+                generationConfig: {
+                  max_output_tokens: 2000
                 }
-              ]
-            }),
-            signal: controller.signal
-          });
+              }),
+              signal: controller.signal
+            });
+          } else {
+            // OpenAI 风格 API 请求格式
+            response = await fetch(qwenEndpoint, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${qwenApiKey}`
+              },
+              body: JSON.stringify({
+                model: qwenModelId, 
+                max_tokens: 2000, // 减少最大 tokens，提高响应速度
+                temperature: 0.3, // 降低温度，减少随机性，提高速度
+                messages: [
+                  {
+                    role: "user",
+                    content: [
+                      { "type": "text", "text": prompt },
+                      { 
+                        "type": "image_url", 
+                        "image_url": { 
+                          "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}` 
+                        } 
+                      }
+                    ]
+                  }
+                ]
+              }),
+              signal: controller.signal
+            });
+          }
 
           if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
             break;
@@ -719,9 +755,16 @@ app.post("/api/students", async (req, res) => {
 
       const data: any = await response.json();
       if (!response.ok) {
-        console.error("QWEN API Full Error Response:", JSON.stringify(data, null, 2));
+        console.error("API Error Details:", {
+          status: response.status,
+          statusText: response.statusText,
+          endpoint: qwenEndpoint,
+          model: qwenModelId,
+          response: data
+        });
         return res.status(response.status).json({ 
-          error: "QWEN API 返回错误", 
+          error: "API 返回错误", 
+          status: response.status,
           details: data 
         });
       }
