@@ -3720,10 +3720,23 @@ export default function App() {
                     >
                       <div className="flex items-center gap-3">
                         <div className={cn(
-                          "w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm",
+                          "w-10 h-10 rounded-xl overflow-hidden border-2 border-white shadow-sm bg-gray-100 flex items-center justify-center",
                           selectedStudent === s.name ? "border-white/20" : "border-white"
                         )}>
-                          <img src={s.avatar} alt={s.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          {s.avatar ? (
+                            <img 
+                              src={s.avatar} 
+                              alt={s.name} 
+                              className="w-full h-full object-cover" 
+                              referrerPolicy="no-referrer"
+                              onError={(e) => {
+                                // 如果头像加载失败，显示默认头像
+                                (e.target as HTMLImageElement).src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(s.name)}`;
+                              }}
+                            />
+                          ) : (
+                            <span className="text-lg font-bold text-gray-400">{s.name.charAt(0)}</span>
+                          )}
                         </div>
                         <div className="text-left">
                           <span className="font-black text-sm block">{s.name}</span>
