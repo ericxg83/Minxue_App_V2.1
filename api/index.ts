@@ -468,11 +468,27 @@ app.post("/api/students", async (req, res) => {
         return res.status(404).json({ error: "学生未找到" });
       }
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('students')
         .update(studentData)
         .eq('id', id)
         .select('id, name, grade, semester, parentName, contact, avatar');
+
+      // 🔧 FIX: 如果 parentName 导致错误，尝试不包含该字段
+      if (error && error.message && error.message.includes('parentName')) {
+        console.warn("⚠️ parentName error in update, retrying without parentName...");
+        const updateData = { ...studentData };
+        delete updateData.parentName;
+        
+        const retryResult = await supabase
+          .from('students')
+          .update(updateData)
+          .eq('id', id)
+          .select('id, name, grade, semester, contact, avatar');
+        
+        data = retryResult.data;
+        error = retryResult.error;
+      }
 
       if (error) throw error;
       res.json({ success: true, student: data[0] });
