@@ -55,7 +55,7 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 // 强制使用魔搭配置（临时解决方案）
 const qwenApiKey = process.env.MODELSCOPE_API_KEY;
 const qwenModelId = "Qwen/Qwen2.5-VL-7B-Instruct";
-const qwenEndpoint = "https://api-inference.modelscope.cn/v1";
+const qwenEndpoint = "https://api-inference.modelscope.cn/v1/chat/completions";
 
 console.log("【强制使用魔搭配置】");
 console.log("Endpoint:", qwenEndpoint);
