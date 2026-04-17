@@ -57,37 +57,43 @@ const qwenModelId = process.env.QWEN_MODEL_ID || "qwen-vl-plus";
 const qwenEndpoint = process.env.QWEN_ENDPOINT || "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
-console.log("\n" + "=".repeat(50));
+console.log("\n" + "=".repeat(60));
 console.log("=== ENVIRONMENT VARIABLES DEBUG ===");
-console.log("=".repeat(50));
-console.log("Environment:", process.env.NODE_ENV || "production");
+console.log("=".repeat(60));
+console.log("Node ENV:", process.env.NODE_ENV || "undefined");
 console.log("SUPABASE_URL present:", !!supabaseUrl);
-console.log("SUPABASE_URL:", supabaseUrl ? `${supabaseUrl.substring(0, 30)}...` : "undefined");
+console.log("SUPABASE_URL value:", supabaseUrl || "NOT SET");
 console.log("SUPABASE_ANON_KEY present:", !!supabaseKey);
 console.log("SUPABASE_ANON_KEY length:", supabaseKey?.length || 0);
-console.log("QWEN_API_KEY present:", !!qwenApiKey);
-console.log("QWEN_MODEL_ID:", qwenModelId);
-console.log("QWEN_ENDPOINT:", qwenEndpoint);
-console.log("=".repeat(50) + "\n");
+console.log("SUPABASE_ANON_KEY preview:", supabaseKey ? `${supabaseKey.substring(0, 20)}...` : "NOT SET");
+console.log("=".repeat(60) + "\n");
 
 // 全局变量，供所有函数访问
 let supabase: any = null;
+let useMockMode = false;
 
 // 只有当环境变量存在时才初始化 Supabase 客户端
 if (supabaseUrl && supabaseKey) {
   try {
     console.log("🔧 Initializing Supabase client...");
+    console.log("🔗 URL:", supabaseUrl);
     supabase = createClient(supabaseUrl, supabaseKey);
     console.log("✅ Supabase client initialized successfully");
-    console.log("🔗 Supabase URL:", supabaseUrl);
+    
+    // 测试连接
+    console.log("🧪 Testing Supabase connection...");
   } catch (error: any) {
     console.error("❌ Supabase client initialization FAILED:", error.message);
-    console.error("⚠️ Falling back to MOCK mode - DATA WILL NOT PERSIST!");
+    useMockMode = true;
   }
 } else {
-  console.error("⚠️ SUPABASE_URL or SUPABASE_ANON_KEY not provided!");
-  console.error("⚠️ Falling back to MOCK mode - DATA WILL NOT PERSIST!");
-  console.error("⚠️ Please set environment variables in Vercel dashboard");
+  console.error("❌ CRITICAL: SUPABASE_URL or SUPABASE_ANON_KEY not set!");
+  console.error("❌ Available env vars:", Object.keys(process.env).filter(k => !k.includes('KEY') && !k.includes('SECRET')).join(', '));
+  useMockMode = true;
+}
+
+if (useMockMode) {
+  console.warn("⚠️⚠️⚠️ RUNNING IN MOCK MODE - DATA WILL NOT BE SAVED! ⚠️⚠️⚠️");
 }
 
 // 打印任务存储
@@ -281,9 +287,13 @@ app.get("/api/students", async (req, res) => {
   try {
     console.log("\n🔌 Supabase Client Status:", !!supabase);
     
-    if (!supabase) {
-      console.warn("⚠️ Returning MOCK data (", mockStudents.length, "students)");
-      return res.json(mockStudents);
+    if (!supabase || useMockMode) {
+      console.error("❌ Cannot fetch students: Database not connected");
+      return res.status(503).json({ 
+        error: "Database not connected", 
+        message: "Please check SUPABASE_URL and SUPABASE_ANON_KEY environment variables",
+        mockMode: true
+      });
     }
 
     console.log("\n💾 Querying database: SELECT specific columns FROM students");
@@ -336,25 +346,12 @@ app.post("/api/students", async (req, res) => {
       console.log("\n🔌 Supabase Client Status:");
       console.log("- supabase object exists:", !!supabase);
       console.log("- supabase type:", typeof supabase);
-      if (!supabase) {
-        console.warn("⚠️ Using MOCK mode - data will NOT persist to database!");
-        console.warn("⚠️ This is likely due to invalid SUPABASE credentials");
-        
-        const newStudent = {
-          ...studentData,
-          id: Date.now().toString(),
-          avatar: studentData.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${studentData.name}`
-        };
-        
-        mockStudents.push(newStudent);
-        console.log("✅ Mock mode: Student added to memory (will be lost on refresh)");
-        console.log("- New student ID:", newStudent.id);
-        console.log("- Total mock students:", mockStudents.length);
-        
-        return res.json({ 
-          success: true, 
-          student: newStudent,
-          warning: "⚠️ MOCK MODE: Data not persisted to database"
+      if (!supabase || useMockMode) {
+        console.error("❌ Cannot add student: Database not connected");
+        return res.status(503).json({ 
+          error: "Database not connected", 
+          message: "Please check SUPABASE_URL and SUPABASE_ANON_KEY environment variables",
+          mockMode: true
         });
       }
 
