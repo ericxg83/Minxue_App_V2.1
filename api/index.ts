@@ -55,7 +55,10 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 // 强制使用魔搭配置（临时解决方案）
 // 临时硬编码 API Key 用于测试
 const qwenApiKey = process.env.MODELSCOPE_API_KEY || "ms-dae707ae-bcc4-4d7e-aa83-e2165d0cdbf5";
-const qwenModelId = "Qwen/Qwen2.5-VL-72B-Instruct";
+// 尝试使用魔搭支持的其他视觉模型
+// 注意：Qwen2.5-VL-72B-Instruct 可能在某些账户下不可用
+// 尝试使用 InternVL3-2B 或其他支持的模型
+const qwenModelId = "OpenGVLab/InternVL3-2B";
 const qwenEndpoint = "https://api-inference.modelscope.cn/v1/chat/completions";
 
 // 强制打印调试信息
