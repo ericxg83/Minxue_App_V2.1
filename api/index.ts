@@ -52,18 +52,15 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 // Qwen API Configuration
-// 优先使用 MODELSCOPE_* 变量，如果没有则使用 QWEN_* 变量
-let qwenApiKey = process.env.MODELSCOPE_API_KEY || process.env.QWEN_API_KEY;
-let qwenModelId = process.env.MODELSCOPE_MODEL_ID || process.env.QWEN_MODEL_ID || "Qwen/Qwen2.5-VL-7B-Instruct";
-let qwenEndpoint = process.env.MODELSCOPE_ENDPOINT || process.env.QWEN_ENDPOINT || "https://api-inference.modelscope.cn/v1";
+// 强制使用魔搭配置（临时解决方案）
+const qwenApiKey = process.env.MODELSCOPE_API_KEY;
+const qwenModelId = "Qwen/Qwen2.5-VL-7B-Instruct";
+const qwenEndpoint = "https://api-inference.modelscope.cn/v1";
 
-// 如果 API Key 是魔搭格式（以 ms- 开头），强制使用魔搭端点和模型
-if (qwenApiKey && qwenApiKey.startsWith('ms-')) {
-  console.log("检测到魔搭 API Key，强制使用魔搭配置");
-  qwenEndpoint = "https://api-inference.modelscope.cn/v1";
-  // 强制使用魔搭模型（忽略环境变量中的模型设置）
-  qwenModelId = "Qwen/Qwen2.5-VL-7B-Instruct";
-}
+console.log("【强制使用魔搭配置】");
+console.log("Endpoint:", qwenEndpoint);
+console.log("Model:", qwenModelId);
+console.log("API Key 存在:", !!qwenApiKey);
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
 console.log("\n" + "=".repeat(60));
