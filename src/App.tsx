@@ -2715,7 +2715,7 @@ export default function App() {
                             查看原图
                           </button>
                           <span className="text-xs font-bold text-red-600">
-                            已加入错题本 3题
+                            已加入错题本 {result.questions?.filter((q: any) => q.added).length || 0}题
                           </span>
                         </div>
                         <button 

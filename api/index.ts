@@ -54,7 +54,7 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 // Qwen API Configuration
 const qwenApiKey = process.env.QWEN_API_KEY || process.env.MODELSCOPE_API_KEY;
 const qwenModelId = process.env.QWEN_MODEL_ID || process.env.MODELSCOPE_MODEL_ID || "Qwen/Qwen2.5-VL-72B-Instruct";
-const qwenEndpoint = process.env.QWEN_ENDPOINT || process.env.MODELSCOPE_ENDPOINT || "https://api-inference.modelscope.cn/v1/chat/completions";
+const qwenEndpoint = process.env.QWEN_ENDPOINT || process.env.MODELSCOPE_ENDPOINT || "https://api-inference.modelscope.cn/v1";
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
 console.log("\n" + "=".repeat(60));
