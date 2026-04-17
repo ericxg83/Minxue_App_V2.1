@@ -57,12 +57,16 @@ const qwenApiKey = process.env.MODELSCOPE_API_KEY;
 const qwenModelId = "Qwen/Qwen2.5-VL-7B-Instruct";
 const qwenEndpoint = "https://api-inference.modelscope.cn/v1/chat/completions";
 
-console.log("【强制使用魔搭配置】");
+// 强制打印调试信息
+console.log("==============================================");
+console.log("【强制使用魔搭配置 - 版本 2024-04-17-v2】");
+console.log("==============================================");
 console.log("Endpoint:", qwenEndpoint);
 console.log("Model:", qwenModelId);
 console.log("API Key 存在:", !!qwenApiKey);
 console.log("API Key 长度:", qwenApiKey?.length || 0);
 console.log("API Key 前缀:", qwenApiKey ? qwenApiKey.substring(0, 20) + "..." : "未设置");
+console.log("==============================================");
 
 // 检查环境变量
 console.log("MODELSCOPE_API_KEY 环境变量:", process.env.MODELSCOPE_API_KEY ? "已设置" : "未设置");
