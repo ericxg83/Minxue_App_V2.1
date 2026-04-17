@@ -61,6 +61,8 @@ console.log("【强制使用魔搭配置】");
 console.log("Endpoint:", qwenEndpoint);
 console.log("Model:", qwenModelId);
 console.log("API Key 存在:", !!qwenApiKey);
+console.log("API Key 长度:", qwenApiKey?.length || 0);
+console.log("API Key 前缀:", qwenApiKey ? qwenApiKey.substring(0, 20) + "..." : "未设置");
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
 console.log("\n" + "=".repeat(60));
