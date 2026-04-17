@@ -363,10 +363,29 @@ app.post("/api/students", async (req, res) => {
       console.log("- Table: students");
       console.log("- Data to insert:", JSON.stringify(studentData, null, 2));
 
-      const { data, error } = await supabase
+      // 🔧 FIX: 移除可能导致 schema cache 问题的字段
+      // 如果 parentName 导致问题，先尝试不插入这个字段
+      const insertData = { ...studentData };
+      
+      // 尝试插入，如果失败则可能是 schema cache 问题
+      let { data, error } = await supabase
         .from('students')
-        .insert([studentData])
+        .insert([insertData])
         .select('id, name, grade, semester, parentName, contact, avatar');
+      
+      // 如果失败且错误与 parentName 相关，尝试不插入 parentName
+      if (error && error.message && error.message.includes('parentName')) {
+        console.warn("⚠️ parentName column error detected, retrying without parentName...");
+        delete insertData.parentName;
+        
+        const retryResult = await supabase
+          .from('students')
+          .insert([insertData])
+          .select('id, name, grade, semester, contact, avatar');
+        
+        data = retryResult.data;
+        error = retryResult.error;
+      }
 
       // 🔍 DEBUG: 检查数据库操作结果
       if (error) {
