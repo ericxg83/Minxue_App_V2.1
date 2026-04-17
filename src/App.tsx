@@ -255,8 +255,9 @@ export default function App() {
   const [dbMessage, setDbMessage] = useState('');
 
   const fetchStudents = () => {
-    // 🔧 FIX: 添加缓存控制，确保获取最新数据
-    fetch('/api/students', {
+    // 🔧 FIX: 添加时间戳参数，强制绕过所有缓存层
+    const timestamp = Date.now();
+    fetch(`/api/students?_t=${timestamp}`, {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache',
