@@ -61,10 +61,8 @@ let qwenEndpoint = process.env.MODELSCOPE_ENDPOINT || process.env.QWEN_ENDPOINT 
 if (qwenApiKey && qwenApiKey.startsWith('ms-')) {
   console.log("检测到魔搭 API Key，强制使用魔搭配置");
   qwenEndpoint = "https://api-inference.modelscope.cn/v1";
-  // 如果模型不是以 Qwen/ 开头，使用默认的魔搭模型
-  if (!qwenModelId || !qwenModelId.includes('/')) {
-    qwenModelId = "Qwen/Qwen2.5-VL-7B-Instruct";
-  }
+  // 强制使用魔搭模型（忽略环境变量中的模型设置）
+  qwenModelId = "Qwen/Qwen2.5-VL-7B-Instruct";
 }
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
