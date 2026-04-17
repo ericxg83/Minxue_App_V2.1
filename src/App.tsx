@@ -255,7 +255,14 @@ export default function App() {
   const [dbMessage, setDbMessage] = useState('');
 
   const fetchStudents = () => {
-    fetch('/api/students')
+    // 🔧 FIX: 添加缓存控制，确保获取最新数据
+    fetch('/api/students', {
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
+      }
+    })
       .then(res => res.json())
       .then(data => {
         setStudents(data);
