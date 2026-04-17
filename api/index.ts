@@ -64,6 +64,10 @@ console.log("API Key 存在:", !!qwenApiKey);
 console.log("API Key 长度:", qwenApiKey?.length || 0);
 console.log("API Key 前缀:", qwenApiKey ? qwenApiKey.substring(0, 20) + "..." : "未设置");
 
+// 检查环境变量
+console.log("MODELSCOPE_API_KEY 环境变量:", process.env.MODELSCOPE_API_KEY ? "已设置" : "未设置");
+console.log("QWEN_API_KEY 环境变量:", process.env.QWEN_API_KEY ? "已设置" : "未设置");
+
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
 console.log("\n" + "=".repeat(60));
 console.log("=== ENVIRONMENT VARIABLES DEBUG ===");
