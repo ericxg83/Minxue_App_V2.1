@@ -53,7 +53,8 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 // Qwen API Configuration
 // 强制使用魔搭配置（临时解决方案）
-const qwenApiKey = process.env.MODELSCOPE_API_KEY;
+// 临时硬编码 API Key 用于测试
+const qwenApiKey = process.env.MODELSCOPE_API_KEY || "ms-dae707ae-bcc4-4d7e-aa83-e2165d0cdbf5";
 const qwenModelId = "Qwen/Qwen2.5-VL-7B-Instruct";
 const qwenEndpoint = "https://api-inference.modelscope.cn/v1/chat/completions";
 
