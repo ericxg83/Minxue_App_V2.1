@@ -707,6 +707,10 @@ app.post("/api/students", async (req, res) => {
             });
           } else {
             // OpenAI 风格 API 请求格式
+            console.log("发送请求到:", qwenEndpoint);
+            console.log("使用模型:", qwenModelId);
+            console.log("API Key 前10位:", qwenApiKey ? qwenApiKey.substring(0, 10) + "..." : "未设置");
+            
             response = await fetch(qwenEndpoint, {
               method: "POST",
               headers: {
