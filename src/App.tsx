@@ -205,6 +205,7 @@ export default function App() {
   });
   const [isSavingStudent, setIsSavingStudent] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteStudentConfirm, setDeleteStudentConfirm] = useState<{id: string, name: string, grade: string} | null>(null);
   const [reportTimeRange, setReportTimeRange] = useState<'week' | 'month' | 'custom'>('week');
   const [studentSearchTerm, setStudentSearchTerm] = useState('');
   const [isStudentPickerOpen, setIsStudentPickerOpen] = useState(false);
@@ -1440,7 +1441,7 @@ export default function App() {
     }
   };
 
-  const handleDeleteStudent = async (id: string) => {
+  const handleDeleteStudent = (id: string) => {
     console.log("\n=== 🗑️ DELETE STUDENT REQUESTED ===");
     console.log("Student ID:", id);
     
@@ -1448,21 +1449,25 @@ export default function App() {
     const studentToDelete = students.find(s => s.id === id);
     console.log("Student to delete:", studentToDelete?.name);
     
-    // ✅ FIX: 添加确认对话框
-    const confirmed = window.confirm(
-      `确定要删除该学生吗？此操作不可恢复\n\n` +
-      `学生姓名：${studentToDelete?.name || '未知'}\n` +
-      `年级：${studentToDelete?.grade || '未知'}`
-    );
-    
-    if (!confirmed) {
-      console.log("❌ User cancelled deletion");
-      console.log("=== END DELETE (CANCELLED) ===\n");
-      return; // 用户取消，不执行删除
+    if (!studentToDelete) {
+      console.error("❌ Student not found");
+      return;
     }
     
+    // ✅ FIX: 使用与删除错题一致的UI
+    setDeleteStudentConfirm({
+      id: studentToDelete.id,
+      name: studentToDelete.name,
+      grade: studentToDelete.grade
+    });
+  };
+  
+  const confirmDeleteStudent = async () => {
+    if (!deleteStudentConfirm) return;
+    
+    const { id, name, grade } = deleteStudentConfirm;
     console.log("✅ User confirmed deletion");
-    console.log("Sending DELETE request...");
+    console.log("Sending DELETE request for:", name);
     
     try {
       const res = await fetch(`/api/students/${id}`, { method: 'DELETE' });
@@ -1478,7 +1483,7 @@ export default function App() {
         setStudents(prev => prev.filter(s => s.id !== id));
         
         // 如果删除的是当前选中的学生，切换到第一个剩余学生
-        if (selectedStudent === studentToDelete?.name) {
+        if (selectedStudent === name) {
           const remaining = students.filter(s => s.id !== id);
           setSelectedStudent(remaining.length > 0 ? remaining[0].name : '');
           console.log("Switched selected student to:", remaining.length > 0 ? remaining[0].name : '(none)');
@@ -1492,6 +1497,8 @@ export default function App() {
     } catch (err) {
       console.error("💥 Delete student exception:", err);
       setError("网络错误，删除失败");
+    } finally {
+      setDeleteStudentConfirm(null);
     }
   };
 
@@ -3597,6 +3604,49 @@ export default function App() {
                 </button>
                 <button
                   onClick={confirmDelete}
+                  className="flex-1 py-3 bg-red-500 text-white text-sm font-black rounded-2xl shadow-lg shadow-red-100 transition-all active:scale-95 flex items-center justify-center uppercase tracking-widest"
+                >
+                  确认删除
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Student Confirmation Modal */}
+      <AnimatePresence>
+        {deleteStudentConfirm && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            className="fixed inset-0 bg-black/60 z-[130] flex items-center justify-center p-6"
+          >
+            <div className="bg-white/90 backdrop-blur-2xl w-full max-w-xs rounded-[32px] p-6 space-y-6 shadow-2xl border border-white/20">
+              <div className="text-center space-y-2">
+                <div className="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center text-red-600 mx-auto shadow-inner">
+                  <Trash2 className="w-7 h-7" />
+                </div>
+                <h3 className="text-xl font-black text-gray-900 tracking-tight">确认删除</h3>
+                <p className="text-xs text-gray-400 font-medium">
+                  删除后将无法恢复，确定要删除该学生吗？
+                </p>
+                <div className="bg-gray-50 rounded-xl p-3 mt-2">
+                  <p className="text-sm font-bold text-gray-800">{deleteStudentConfirm.name}</p>
+                  <p className="text-xs text-gray-500">{deleteStudentConfirm.grade}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteStudentConfirm(null)}
+                  className="flex-1 py-3 text-gray-400 text-sm font-black uppercase tracking-widest hover:bg-gray-50 rounded-2xl transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={confirmDeleteStudent}
                   className="flex-1 py-3 bg-red-500 text-white text-sm font-black rounded-2xl shadow-lg shadow-red-100 transition-all active:scale-95 flex items-center justify-center uppercase tracking-widest"
                 >
                   确认删除
