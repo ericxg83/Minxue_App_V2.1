@@ -145,14 +145,14 @@ async function cropImage(base64Image: string, box: { x: number; y: number; width
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-// ModelScope (魔搭) API Configuration - 使用已验证可用的模型
+// ModelScope (魔搭) API Configuration
 const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "ms-dae707ae-bcc4-4d7e-aa83-e2165d0cdbf5";
-// 使用 Kimi-K2.5 - 之前测试过能正常工作
-const modelscopeModelId = "moonshotai/Kimi-K2.5";
+// 使用 Qwen2-VL-OCR 专用模型 - 更快更轻量
+const modelscopeModelId = "iic/cv_qwen2_vl_ocr";
 const modelscopeEndpoint = "https://api-inference.modelscope.cn/v1/chat/completions";
 
 console.log("==============================================");
-console.log("【使用魔搭 ModelScope - Kimi-K2.5】");
+console.log("【使用魔搭 ModelScope - Qwen2-VL-OCR】");
 console.log("==============================================");
 console.log("Endpoint:", modelscopeEndpoint);
 console.log("Model:", modelscopeModelId);
@@ -665,8 +665,8 @@ app.post("/api/students", async (req, res) => {
   // API: Analyze Question using QWEN (DashScope)
   app.post("/api/analyze-question", async (req, res) => {
     const controller = new AbortController();
-    // Vercel Hobby 套餐限制 30 秒，设置 25 秒超时以确保安全
-    const timeoutId = setTimeout(() => controller.abort("timeout"), 25000);
+    // Vercel Hobby 套餐限制 30 秒，设置 28 秒超时以最大化利用时间
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 28000);
 
     try {
       const { base64Image } = req.body;
