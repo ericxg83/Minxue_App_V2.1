@@ -148,9 +148,9 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 // ModelScope (魔搭) API Configuration
 // 获取 API Key: https://www.modelscope.cn/my/myaccesstoken
 const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || process.env.QWEN_API_KEY || "";
-// 使用 qwen2-vl-7b-instruct - 速度较快且准确
-const modelscopeModelId = process.env.MODELSCOPE_MODEL_ID || "qwen2-vl-7b-instruct";
-const modelscopeEndpoint = process.env.MODELSCOPE_ENDPOINT || "https://api-inference.modelscope.cn/v1/chat/completions";
+// 使用 qwen-vl-plus - 阿里云百炼支持的模型
+const modelscopeModelId = process.env.QWEN_MODEL_ID || "qwen-vl-plus";
+const modelscopeEndpoint = process.env.QWEN_ENDPOINT || "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 
 console.log("==============================================");
 console.log("【使用魔搭 ModelScope - qwen2-vl-7b-instruct】");
