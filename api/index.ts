@@ -2,6 +2,100 @@ import express from "express";
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 import sharp from "sharp";
+import PDFDocument from 'pdfkit';
+import QRCode from 'qrcode';
+import { PassThrough } from 'stream';
+
+// PDF生成函数（内联以避免动态导入问题）
+async function generatePDF(task: any): Promise<Buffer> {
+  return new Promise(async (resolve, reject) => {
+    try {
+      const doc = new PDFDocument({
+        size: 'A4',
+        margin: { top: 80, right: 60, bottom: 80, left: 60 }
+      });
+
+      const stream = new PassThrough();
+      const chunks: Buffer[] = [];
+
+      stream.on('data', (chunk) => chunks.push(chunk));
+      stream.on('end', () => resolve(Buffer.concat(chunks)));
+
+      doc.pipe(stream);
+
+      // 生成二维码
+      const qrCodeContent = `http://localhost:3001/correct?taskId=${task.id}`;
+      const qrCodeDataUrl = await QRCode.toDataURL(qrCodeContent, { width: 100, margin: 1 });
+      const qrCodeBase64 = qrCodeDataUrl.replace(/^data:image\/\w+;base64,/, '');
+      const qrCodeBuffer = Buffer.from(qrCodeBase64, 'base64');
+
+      doc.save();
+      doc.translate(495, 20);
+      doc.image(qrCodeBuffer, 0, 0, { width: 50, height: 50 });
+      doc.restore();
+
+      doc.fontSize(20);
+      doc.text('错题本', { align: 'center' });
+      doc.moveDown(0.5);
+
+      doc.fontSize(12);
+      doc.text(`学生：${task.student}`, { align: 'center' });
+      doc.moveDown(2);
+
+      task.questions.forEach((question: any, index: number) => {
+        doc.fontSize(14);
+        doc.font('Helvetica-Bold');
+        doc.text(`第 ${question.number} 题`, { align: 'left' });
+        doc.font('Helvetica');
+        doc.moveDown(0.5);
+
+        doc.fontSize(12);
+        const stem = question.question || question.text;
+        const options = question.options || [];
+
+        doc.text(stem, { align: 'left' });
+        doc.moveDown(0.5);
+
+        if (options.length > 0) {
+          const optionWidth = 495 / options.length;
+          const startX = doc.x;
+          const startY = doc.y;
+
+          options.forEach((option: string, idx: number) => {
+            doc.text(option.trim(), startX + optionWidth * idx, startY, {
+              width: optionWidth - 10,
+              align: 'left'
+            });
+          });
+
+          doc.y = startY + doc.currentLineHeight() * 2;
+          doc.moveDown(0.5);
+        } else {
+          doc.text(question.text, { align: 'left' });
+          doc.moveDown(1);
+        }
+
+        doc.moveDown(3);
+        doc.lineWidth(1);
+        doc.strokeColor('#ddd');
+        doc.dash(5, { space: 5 });
+        doc.moveTo(55, doc.y);
+        doc.lineTo(555, doc.y);
+        doc.stroke();
+        doc.undash();
+        doc.moveDown(2);
+
+        if (index < task.questions.length - 1 && doc.y > 700) {
+          doc.addPage();
+        }
+      });
+
+      doc.end();
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
 
 // 裁剪图片函数
 async function cropImage(base64Image: string, box: { x: number; y: number; width: number; height: number }): Promise<string> {
@@ -1868,7 +1962,6 @@ app.post("/api/students", async (req, res) => {
       });
 
       // 生成PDF
-      const { generatePDF } = await import('./src/utils/pdfGenerator');
       const pdfBuffer = await generatePDF({
         id: task.id,
         questions,
