@@ -147,8 +147,7 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 // ModelScope (魔搭) API Configuration
 // 获取 API Key: https://www.modelscope.cn/my/myaccesstoken
-// 注意：请替换为你自己的 API Key
-const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "ms-dae707ae-bcc4-4d7e-aa83-e2165d0cdbf5";
+const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "";
 // 使用魔搭支持的视觉模型 (注意：必须是 ModelScope API 支持的模型)
 // 可用模型：moonshotai/Kimi-K2.5 (视觉多模态)
 const modelscopeModelId = process.env.MODELSCOPE_MODEL_ID || "moonshotai/Kimi-K2.5";
