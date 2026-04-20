@@ -884,6 +884,7 @@ app.post("/api/students", async (req, res) => {
               // 使用 Buffer 确保正确编码，避免 ByteString 错误
               const bodyBuffer = Buffer.from(requestBodyStr, 'utf-8');
 
+              console.log("开始发送请求到 ModelScope...");
               response = await fetch(modelscopeEndpoint, {
                 method: "POST",
                 headers: {
@@ -894,11 +895,14 @@ app.post("/api/students", async (req, res) => {
                 body: bodyBuffer,
                 signal: controller.signal
               });
+              console.log("收到响应:", response.status, response.statusText);
 
           if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
+            console.log("请求成功或客户端错误，跳出重试循环");
             break;
           }
           
+          console.log(`请求失败，状态码: ${response.status}，准备重试...`);
           throw new Error(`API returned status ${response.status}`);
         } catch (error: any) {
           lastError = error;
