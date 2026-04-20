@@ -730,7 +730,31 @@ app.post("/api/students", async (req, res) => {
               console.log("发送请求到:", qianfanEndpoint);
               console.log("使用模型:", qianfanModelId);
               console.log("API Key 前10位:", qianfanApiKey ? qianfanApiKey.substring(0, 10) + "..." : "未设置");
+              console.log("原始图片数据长度:", base64Image.length);
+              console.log("原始图片数据前50位:", base64Image.substring(0, 50));
 
+              // 清理和验证 base64 数据
+              let cleanBase64 = base64Image;
+              
+              // 移除 data URL 前缀（如果有）
+              if (cleanBase64.startsWith('data:')) {
+                cleanBase64 = cleanBase64.replace(/^data:image\/[^;]+;base64,/, '');
+              }
+              
+              // 只保留有效的 base64 字符 (A-Z, a-z, 0-9, +, /, =)
+              cleanBase64 = cleanBase64.replace(/[^A-Za-z0-9+/=]/g, '');
+              
+              // 确保 base64 长度是4的倍数
+              while (cleanBase64.length % 4 !== 0) {
+                cleanBase64 += '=';
+              }
+              
+              console.log("清理后 base64 长度:", cleanBase64.length);
+              console.log("清理后 base64 前50位:", cleanBase64.substring(0, 50));
+              
+              // 构建最终的图片 URL
+              const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
+              
               response = await fetch(qianfanEndpoint, {
                 method: "POST",
                 headers: {
@@ -746,16 +770,12 @@ app.post("/api/students", async (req, res) => {
                       role: "user",
                       content: [
                         { "type": "text", "text": prompt },
-                        (() => {
-                          // 百度千帆需要使用 base64 格式
-                          const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-                          return {
-                            "type": "image_url",
-                            "image_url": {
-                              "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`
-                            }
-                          };
-                        })()
+                        {
+                          "type": "image_url",
+                          "image_url": {
+                            "url": imageUrl
+                          }
+                        }
                       ]
                     }
                   ]
@@ -1148,12 +1168,26 @@ app.post("/api/students", async (req, res) => {
               content: [
                 { "type": "text", "text": prompt },
                 (() => {
-                  // 百度千帆需要使用 base64 格式
-                  const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+                  // 清理和验证 base64 数据
+                  let cleanBase64 = base64Image;
+                  
+                  // 移除 data URL 前缀（如果有）
+                  if (cleanBase64.startsWith('data:')) {
+                    cleanBase64 = cleanBase64.replace(/^data:image\/[^;]+;base64,/, '');
+                  }
+                  
+                  // 只保留有效的 base64 字符 (A-Z, a-z, 0-9, +, /, =)
+                  cleanBase64 = cleanBase64.replace(/[^A-Za-z0-9+/=]/g, '');
+                  
+                  // 确保 base64 长度是4的倍数
+                  while (cleanBase64.length % 4 !== 0) {
+                    cleanBase64 += '=';
+                  }
+                  
                   return {
                     "type": "image_url",
                     "image_url": {
-                      "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`
+                      "url": `data:image/jpeg;base64,${cleanBase64}`
                     }
                   };
                 })()
