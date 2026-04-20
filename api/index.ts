@@ -669,20 +669,29 @@ app.post("/api/students", async (req, res) => {
   // API: Test ModelScope Connection (调试用)
   app.get("/api/test-modelscope", async (req, res) => {
     try {
+      // 直接读取环境变量，绕过常量
+      const directApiKey = process.env.MODELSCOPE_API_KEY || "";
+      
       console.log("=== 测试 ModelScope 连接 ===");
-      console.log("API Key:", modelscopeApiKey ? `${modelscopeApiKey.substring(0, 10)}...` : "未设置");
+      console.log("常量 API Key:", modelscopeApiKey ? `${modelscopeApiKey.substring(0, 10)}...` : "未设置");
+      console.log("直接读取 API Key:", directApiKey ? `${directApiKey.substring(0, 10)}...` : "未设置");
       console.log("Endpoint:", modelscopeEndpoint);
       console.log("Model:", modelscopeModelId);
       
+      // 使用直接读取的值
+      const effectiveApiKey = directApiKey || modelscopeApiKey;
+      
       // 检查 API Key 是否设置
-      if (!modelscopeApiKey || modelscopeApiKey.length < 10) {
+      if (!effectiveApiKey || effectiveApiKey.length < 10) {
         return res.status(400).json({
           error: "API Key 未配置",
           message: "请在 Vercel 环境变量中设置 MODELSCOPE_API_KEY",
           details: "获取 API Key: https://www.modelscope.cn/my/myaccesstoken",
           debug: {
-            apiKeyValue: modelscopeApiKey,
-            apiKeyLength: modelscopeApiKey ? modelscopeApiKey.length : 0,
+            constantApiKey: modelscopeApiKey,
+            directApiKey: directApiKey,
+            effectiveApiKey: effectiveApiKey,
+            apiKeyLength: effectiveApiKey ? effectiveApiKey.length : 0,
             envVarNames: Object.keys(process.env).filter(k => k.toLowerCase().includes('model') || k.toLowerCase().includes('api')),
             allEnvVars: Object.keys(process.env)
           }
@@ -748,12 +757,19 @@ app.post("/api/students", async (req, res) => {
 
   // API: Analyze Question using ModelScope
   app.post("/api/analyze-question", async (req, res) => {
+    // 直接读取环境变量（确保获取最新值）
+    const effectiveApiKey = process.env.MODELSCOPE_API_KEY || modelscopeApiKey;
+    
     // 检查 API Key 是否设置
-    if (!modelscopeApiKey || modelscopeApiKey.length < 10) {
+    if (!effectiveApiKey || effectiveApiKey.length < 10) {
       return res.status(400).json({
         error: "API Key 未配置",
         message: "请在 Vercel 环境变量中设置 MODELSCOPE_API_KEY",
-        details: "获取 API Key: https://www.modelscope.cn/my/myaccesstoken"
+        details: "获取 API Key: https://www.modelscope.cn/my/myaccesstoken",
+        debug: {
+          envVarValue: process.env.MODELSCOPE_API_KEY,
+          constantValue: modelscopeApiKey
+        }
       });
     }
     
@@ -818,7 +834,7 @@ app.post("/api/students", async (req, res) => {
               // ModelScope API 请求格式 (OpenAI 兼容)
               console.log("发送请求到:", modelscopeEndpoint);
               console.log("使用模型:", modelscopeModelId);
-              console.log("API Key 前10位:", modelscopeApiKey ? modelscopeApiKey.substring(0, 10) + "..." : "未设置");
+              console.log("API Key 前10位:", effectiveApiKey ? effectiveApiKey.substring(0, 10) + "..." : "未设置");
               console.log("原始图片数据长度:", base64Image.length);
 
               // 清理和验证 base64 数据
@@ -871,7 +887,7 @@ app.post("/api/students", async (req, res) => {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json; charset=utf-8",
-                  "Authorization": `Bearer ${modelscopeApiKey}`,
+                  "Authorization": `Bearer ${effectiveApiKey}`,
                   "Content-Length": bodyBuffer.length.toString()
                 },
                 body: bodyBuffer,
