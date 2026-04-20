@@ -158,10 +158,13 @@ console.log("==============================================");
 console.log("Endpoint:", modelscopeEndpoint);
 console.log("Model:", modelscopeModelId);
 console.log("API Key 存在:", !!modelscopeApiKey);
+console.log("API Key 长度:", modelscopeApiKey ? modelscopeApiKey.length : 0);
+console.log("API Key 前缀:", modelscopeApiKey ? modelscopeApiKey.substring(0, 20) : "N/A");
 console.log("==============================================");
 
 // 检查环境变量
 console.log("MODELSCOPE_API_KEY 环境变量:", process.env.MODELSCOPE_API_KEY ? "已设置" : "未设置");
+console.log("所有环境变量 keys:", Object.keys(process.env).filter(k => k.includes('MODEL') || k.includes('API')));
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
 console.log("\n" + "=".repeat(60));
@@ -719,7 +722,9 @@ app.post("/api/students", async (req, res) => {
         ok: testResponse.ok,
         statusText: testResponse.statusText,
         apiKeyConfigured: !!modelscopeApiKey,
-        apiKeyPrefix: modelscopeApiKey ? modelscopeApiKey.substring(0, 10) : null,
+        apiKeyLength: modelscopeApiKey ? modelscopeApiKey.length : 0,
+        apiKeyPrefix: modelscopeApiKey ? modelscopeApiKey.substring(0, 20) : null,
+        envVars: Object.keys(process.env).filter(k => k.includes('MODEL') || k.includes('API')),
         endpoint: modelscopeEndpoint,
         model: modelscopeModelId,
         errorMessage: responseData?.error?.message || null,
