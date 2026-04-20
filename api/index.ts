@@ -671,7 +671,7 @@ app.post("/api/students", async (req, res) => {
   // API: Analyze Question using QWEN (DashScope)
   app.post("/api/analyze-question", async (req, res) => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort("timeout"), 120000); // 120秒超时保护
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 55000); // 55秒超时保护（Vercel限制60秒）
 
     try {
       const { base64Image } = req.body;
