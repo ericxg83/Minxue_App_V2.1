@@ -815,6 +815,9 @@ app.post("/api/students", async (req, res) => {
       // 移除可能存在的 Markdown 代码块标记
       content = content.replace(/```json\n?|```/g, '').trim();
       
+      // 移除可能存在的单个反引号（AI 有时会用 ` 包裹 JSON）
+      content = content.replace(/^`|`$/g, '').trim();
+      
       // 尝试提取 JSON 对象（如果 AI 返回了多余的文字）
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
