@@ -745,7 +745,8 @@ app.post("/api/students", async (req, res) => {
 
               console.log("清理后 base64 长度:", cleanBase64.length);
 
-              // 构建请求体 - 使用纯 base64 字符串（不带 data URL 前缀）
+              // 构建请求体 - 魔搭需要 data URL 格式
+              const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
               const requestBody = {
                 model: modelscopeModelId,
                 max_tokens: 1500,
@@ -758,7 +759,7 @@ app.post("/api/students", async (req, res) => {
                       {
                         type: "image_url",
                         image_url: {
-                          url: cleanBase64
+                          url: imageUrl
                         }
                       }
                     ]
@@ -768,6 +769,7 @@ app.post("/api/students", async (req, res) => {
 
               const requestBodyStr = JSON.stringify(requestBody);
               console.log("请求体长度:", requestBodyStr.length);
+              console.log("图片 URL 前50位:", imageUrl.substring(0, 50));
 
               response = await fetch(modelscopeEndpoint, {
                 method: "POST",
@@ -1180,10 +1182,13 @@ app.post("/api/students", async (req, res) => {
                     cleanBase64 += '=';
                   }
 
+                  // 魔搭需要 data URL 格式
+                  const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
+                  
                   return {
                     type: "image_url",
                     image_url: {
-                      url: cleanBase64
+                      url: imageUrl
                     }
                   };
                 })()
