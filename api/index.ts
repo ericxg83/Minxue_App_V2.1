@@ -678,7 +678,13 @@ app.post("/api/students", async (req, res) => {
         return res.status(400).json({
           error: "API Key 未配置",
           message: "请在 Vercel 环境变量中设置 MODELSCOPE_API_KEY",
-          details: "获取 API Key: https://www.modelscope.cn/my/myaccesstoken"
+          details: "获取 API Key: https://www.modelscope.cn/my/myaccesstoken",
+          debug: {
+            apiKeyValue: modelscopeApiKey,
+            apiKeyLength: modelscopeApiKey ? modelscopeApiKey.length : 0,
+            envVarNames: Object.keys(process.env).filter(k => k.toLowerCase().includes('model') || k.toLowerCase().includes('api')),
+            allEnvVars: Object.keys(process.env)
+          }
         });
       }
 
