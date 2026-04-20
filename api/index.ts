@@ -775,8 +775,8 @@ app.post("/api/students", async (req, res) => {
     }
     
     const controller = new AbortController();
-    // Vercel Hobby 套餐限制 30 秒，设置 28 秒超时以最大化利用时间
-    const timeoutId = setTimeout(() => controller.abort("timeout"), 28000);
+    // Vercel Hobby 套餐限制 30 秒，设置 25 秒超时以留缓冲时间
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 25000);
 
     try {
       const { base64Image } = req.body;
@@ -860,7 +860,7 @@ app.post("/api/students", async (req, res) => {
               const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
               const requestBody = {
                 model: modelscopeModelId,
-                max_tokens: 1500,
+                max_tokens: 800,
                 temperature: 0.3,
                 messages: [
                   {
