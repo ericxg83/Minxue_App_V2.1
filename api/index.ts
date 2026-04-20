@@ -145,24 +145,23 @@ async function cropImage(base64Image: string, box: { x: number; y: number; width
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-// 阿里云百炼 (DashScope) API Configuration
-// 获取 API Key: https://bailian.console.aliyun.com/
-const dashscopeApiKey = process.env.DASHSCOPE_API_KEY || process.env.QWEN_API_KEY || "sk-替换为你的APIKey";
-// 使用 qwen-vl-plus-latest - 阿里云百炼支持的模型
-const dashscopeModelId = "qwen-vl-plus-latest";
-const dashscopeEndpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+// ModelScope (魔搭) API Configuration
+// 获取 API Key: https://www.modelscope.cn/my/myaccesstoken
+const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "ms-替换为你的APIKey";
+// 使用 qwen2-vl-7b-instruct - 速度较快且准确
+const modelscopeModelId = process.env.MODELSCOPE_MODEL_ID || "qwen2-vl-7b-instruct";
+const modelscopeEndpoint = process.env.MODELSCOPE_ENDPOINT || "https://api-inference.modelscope.cn/v1/chat/completions";
 
 console.log("==============================================");
-console.log("【使用阿里云百炼 - qwen-vl-plus】");
+console.log("【使用魔搭 ModelScope - qwen2-vl-7b-instruct】");
 console.log("==============================================");
-console.log("Endpoint:", dashscopeEndpoint);
-console.log("Model:", dashscopeModelId);
-console.log("API Key 存在:", !!dashscopeApiKey);
+console.log("Endpoint:", modelscopeEndpoint);
+console.log("Model:", modelscopeModelId);
+console.log("API Key 存在:", !!modelscopeApiKey);
 console.log("==============================================");
 
 // 检查环境变量
 console.log("MODELSCOPE_API_KEY 环境变量:", process.env.MODELSCOPE_API_KEY ? "已设置" : "未设置");
-console.log("QWEN_API_KEY 环境变量:", process.env.QWEN_API_KEY ? "已设置" : "未设置");
 
 // 🔍 DEBUG: 打印环境变量信息（用于排查线上问题）
 console.log("\n" + "=".repeat(60));
@@ -174,9 +173,9 @@ console.log("SUPABASE_URL value:", supabaseUrl || "NOT SET");
 console.log("SUPABASE_ANON_KEY present:", !!supabaseKey);
 console.log("SUPABASE_ANON_KEY length:", supabaseKey?.length || 0);
 console.log("SUPABASE_ANON_KEY preview:", supabaseKey ? `${supabaseKey.substring(0, 20)}...` : "NOT SET");
-console.log("DASHSCOPE_API_KEY present:", !!dashscopeApiKey);
-console.log("DASHSCOPE_MODEL_ID:", dashscopeModelId);
-console.log("DASHSCOPE_ENDPOINT:", dashscopeEndpoint);
+console.log("MODELSCOPE_API_KEY present:", !!modelscopeApiKey);
+console.log("MODELSCOPE_MODEL_ID:", modelscopeModelId);
+console.log("MODELSCOPE_ENDPOINT:", modelscopeEndpoint);
 console.log("=".repeat(60) + "\n");
 
 // 全局变量，供所有函数访问
@@ -663,23 +662,22 @@ app.post("/api/students", async (req, res) => {
     }
   });
 
-  // API: Test DashScope Connection (调试用)
-  app.get("/api/test-dashscope", async (req, res) => {
+  // API: Test ModelScope Connection (调试用)
+  app.get("/api/test-modelscope", async (req, res) => {
     try {
-      console.log("=== 测试 DashScope 连接 ===");
-      console.log("API Key:", dashscopeApiKey ? `${dashscopeApiKey.substring(0, 10)}...` : "未设置");
-      console.log("Endpoint:", dashscopeEndpoint);
-      console.log("Model:", dashscopeModelId);
+      console.log("=== 测试 ModelScope 连接 ===");
+      console.log("API Key:", modelscopeApiKey ? `${modelscopeApiKey.substring(0, 10)}...` : "未设置");
+      console.log("Endpoint:", modelscopeEndpoint);
+      console.log("Model:", modelscopeModelId);
 
-      const testResponse = await fetch(dashscopeEndpoint, {
+      const testResponse = await fetch(modelscopeEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${dashscopeApiKey}`,
-          "X-DashScope-Api-Key": dashscopeApiKey
+          "Authorization": `Bearer ${modelscopeApiKey}`
         },
         body: JSON.stringify({
-          model: dashscopeModelId,
+          model: modelscopeModelId,
           max_tokens: 100,
           messages: [
             {
@@ -705,15 +703,15 @@ app.post("/api/students", async (req, res) => {
         status: testResponse.status,
         ok: testResponse.ok,
         statusText: testResponse.statusText,
-        apiKeyConfigured: !!dashscopeApiKey,
-        apiKeyPrefix: dashscopeApiKey ? dashscopeApiKey.substring(0, 10) : null,
-        endpoint: dashscopeEndpoint,
-        model: dashscopeModelId,
+        apiKeyConfigured: !!modelscopeApiKey,
+        apiKeyPrefix: modelscopeApiKey ? modelscopeApiKey.substring(0, 10) : null,
+        endpoint: modelscopeEndpoint,
+        model: modelscopeModelId,
         errorMessage: responseData?.error?.message || null,
         response: responseData
       });
     } catch (error: any) {
-      console.error("DashScope 测试失败:", error);
+      console.error("ModelScope 测试失败:", error);
       return res.status(500).json({
         error: error.message,
         details: error.toString()
@@ -721,7 +719,7 @@ app.post("/api/students", async (req, res) => {
     }
   });
 
-  // API: Analyze Question using QWEN (DashScope)
+  // API: Analyze Question using ModelScope
   app.post("/api/analyze-question", async (req, res) => {
     const controller = new AbortController();
     // Vercel Hobby 套餐限制 30 秒，设置 28 秒超时以最大化利用时间
@@ -732,7 +730,7 @@ app.post("/api/students", async (req, res) => {
       if (!base64Image) return res.status(400).json({ error: "图片不能为空" });
 
       const imageSizeKB = Math.round(base64Image.length * 0.75 / 1024);
-      console.log(`Starting AI Analysis with DashScope (${dashscopeModelId}). Image size: ~${imageSizeKB}KB.`);
+      console.log(`Starting AI Analysis with ModelScope (${modelscopeModelId}). Image size: ~${imageSizeKB}KB.`);
       
       // 检查图片大小，超过 2MB 建议压缩
       if (imageSizeKB > 2048) {
@@ -781,10 +779,10 @@ app.post("/api/students", async (req, res) => {
                 await new Promise(resolve => setTimeout(resolve, 1000));
               }
 
-              // 阿里云百炼 DashScope API 请求格式 (OpenAI 兼容)
-              console.log("发送请求到:", dashscopeEndpoint);
-              console.log("使用模型:", dashscopeModelId);
-              console.log("API Key 前10位:", dashscopeApiKey ? dashscopeApiKey.substring(0, 10) + "..." : "未设置");
+              // ModelScope API 请求格式 (OpenAI 兼容)
+              console.log("发送请求到:", modelscopeEndpoint);
+              console.log("使用模型:", modelscopeModelId);
+              console.log("API Key 前10位:", modelscopeApiKey ? modelscopeApiKey.substring(0, 10) + "..." : "未设置");
               console.log("原始图片数据长度:", base64Image.length);
 
               // 清理和验证 base64 数据
@@ -805,10 +803,10 @@ app.post("/api/students", async (req, res) => {
 
               console.log("清理后 base64 长度:", cleanBase64.length);
 
-              // 构建请求体 - 阿里云百炼需要 data URL 格式
+              // 构建请求体 - ModelScope 需要 data URL 格式
               const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
               const requestBody = {
-                model: dashscopeModelId,
+                model: modelscopeModelId,
                 max_tokens: 1500,
                 temperature: 0.3,
                 messages: [
@@ -830,13 +828,11 @@ app.post("/api/students", async (req, res) => {
               const requestBodyStr = JSON.stringify(requestBody);
               console.log("请求体长度:", requestBodyStr.length);
 
-              response = await fetch(dashscopeEndpoint, {
+              response = await fetch(modelscopeEndpoint, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "Authorization": `Bearer ${dashscopeApiKey}`,
-                  // 阿里云百炼也支持 api-key 方式
-                  "X-DashScope-Api-Key": dashscopeApiKey
+                  "Authorization": `Bearer ${modelscopeApiKey}`
                 },
                 body: requestBodyStr,
                 signal: controller.signal
@@ -863,12 +859,12 @@ app.post("/api/students", async (req, res) => {
 
       clearTimeout(timeoutId);
       
-      // 检查百度千帆 API 响应类型
+      // 检查 ModelScope API 响应类型
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
-        console.error("Qianfan API returned non-JSON response:", text);
-        throw new Error(`Qianfan API 响应异常 (非 JSON): ${text.substring(0, 500)}`);
+        console.error("ModelScope API returned non-JSON response:", text);
+        throw new Error(`ModelScope API 响应异常 (非 JSON): ${text.substring(0, 500)}`);
       }
 
       const data: any = await response.json();
@@ -876,10 +872,10 @@ app.post("/api/students", async (req, res) => {
         console.error("API Error Details:", {
           status: response.status,
           statusText: response.statusText,
-          endpoint: dashscopeEndpoint,
-          model: dashscopeModelId,
+          endpoint: modelscopeEndpoint,
+          model: modelscopeModelId,
           requestBody: {
-            model: dashscopeModelId,
+            model: modelscopeModelId,
             max_tokens: 1500,
             temperature: 0.3,
             messages_count: 1
@@ -898,8 +894,8 @@ app.post("/api/students", async (req, res) => {
       // 检查 API 响应格式是否有效
       if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
         console.error("Invalid API Response Format:", {
-          endpoint: dashscopeEndpoint,
-          model: dashscopeModelId,
+          endpoint: modelscopeEndpoint,
+          model: modelscopeModelId,
           response: data
         });
         return res.status(500).json({
@@ -911,8 +907,8 @@ app.post("/api/students", async (req, res) => {
 
       if (!data.choices[0].message || !data.choices[0].message.content) {
         console.error("Invalid API Response Content:", {
-          endpoint: dashscopeEndpoint,
-          model: dashscopeModelId,
+          endpoint: modelscopeEndpoint,
+          model: modelscopeModelId,
           choice: data.choices[0]
         });
         return res.status(500).json({
@@ -1218,18 +1214,16 @@ app.post("/api/students", async (req, res) => {
   "options": ["A. 选项内容", "B. 选项内容", "C. 选项内容", "D. 选项内容"]
 }`;
 
-      // 阿里云百炼 DashScope API 请求格式 (OpenAI 兼容)
+      // ModelScope API 请求格式 (OpenAI 兼容)
       let response: Response;
-      response = await fetch(dashscopeEndpoint, {
+      response = await fetch(modelscopeEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${dashscopeApiKey}`,
-          // 阿里云百炼也支持 api-key 方式
-          "X-DashScope-Api-Key": dashscopeApiKey
+          "Authorization": `Bearer ${modelscopeApiKey}`
         },
         body: JSON.stringify({
-          model: dashscopeModelId,
+          model: modelscopeModelId,
           max_tokens: 2000,
           messages: [
             {
