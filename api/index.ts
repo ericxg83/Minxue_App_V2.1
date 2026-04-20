@@ -241,10 +241,26 @@ function processOCRData(ocrLines: OCRTextLine[], pageWidth: number = 1000): any[
     
     // 提取选项（支持 A.、A、A．、A) 等多种格式）
     // 匹配 A/B/C/D 后跟标点符号（英文点、中文点、顿号、右括号等）
-    const optionRegex = /([A-D])[\.．、\)\s]\s*(.+?)(?=([A-D])[\.．、\)\s]|$)/g;
+    // 使用兼容的正则，避免先行断言
+    const optionRegex = /([A-D])[\.．、\)\s]\s*([^A-D]*)/g;
     let optionMatch;
     while ((optionMatch = optionRegex.exec(stem)) !== null) {
-      options.push(`${optionMatch[1]}. ${optionMatch[2].trim()}`);
+      const optText = optionMatch[2].trim();
+      // 手动检查下一个选项标记
+      const nextIdx = optionMatch.index + optionMatch[0].length;
+      const remaining = stem.substring(nextIdx);
+      const nextMatch = remaining.match(/^[A-D][\.．、\)\s]/);
+      if (nextMatch) {
+        // 截取到下一个选项之前
+        const endIdx = remaining.search(/[A-D][\.．、\)\s]/);
+        if (endIdx > 0) {
+          options.push(`${optionMatch[1]}. ${optText + remaining.substring(0, endIdx).trim()}`);
+        } else {
+          options.push(`${optionMatch[1]}. ${optText}`);
+        }
+      } else {
+        options.push(`${optionMatch[1]}. ${optText}`);
+      }
     }
     
     // 调试日志：打印选项提取结果
@@ -838,7 +854,18 @@ app.post("/api/students", async (req, res) => {
           // 1. 针对数学公式中的反斜杠进行转义处理 (在处理引号之前，先处理明显的 LaTeX 错误)
           // 许多 AI 会输出 \sqrt 而不是 \\sqrt
           // 我们寻找所有不是有效 JSON 转义序列的反斜杠并双重转义它们
-          fixed = fixed.replace(/\\(?!["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, '\\\\');
+          // 使用兼容的方式：先匹配所有反斜杠，然后检查后面是否是有效的转义序列
+          fixed = fixed.replace(/\\(.?)/g, (match, char) => {
+            if (!char) return '\\\\';
+            const validEscapes = ['"', '\\', '/', 'b', 'f', 'n', 'r', 't'];
+            if (validEscapes.includes(char)) return match;
+            if (char === 'u') {
+              // 检查是否是有效的 unicode 转义
+              const next4 = match.substring(2, 6);
+              if (/^[0-9a-fA-F]{4}$/.test(next4)) return match;
+            }
+            return '\\\\' + char;
+          });
 
           // 2. 处理引号内的换行符 (JSON 不允许字符串内直接换行)
           // 使用更健壮的正则来匹配 JSON 字符串，考虑转义引号
@@ -848,16 +875,29 @@ app.post("/api/students", async (req, res) => {
 
           // 3. 尝试修复未转义的双引号 (这是一个启发式修复)
           // 匹配 "text": "..." 结构中的内容
-          fixed = fixed.replace(/"text":\s*"([\s\S]*?)"(?=\s*[,
-}])/g, (match, p1) => {
+          // 使用兼容的正则，避免先行断言
+          fixed = fixed.replace(/"text":\s*"([\s\S]*?)"/g, (match, p1) => {
+            // 检查后面是否是逗号、换行或结束符
+            const matchEnd = match.length;
+            const afterMatch = fixed.substring(fixed.indexOf(match) + matchEnd, fixed.indexOf(match) + matchEnd + 10);
+            if (!/^\s*[,\n}]/.test(afterMatch) && !afterMatch.includes('"')) {
+              return match; // 不匹配，返回原字符串
+            }
             // 将内部未转义的引号转义，排除掉已经是 \" 的情况
-            const escapedText = p1.replace(/(?<!\\)"/g, '\\"');
+            const escapedText = p1.replace(/\\"|"/g, (m) => m === '"' ? '\\"' : m);
             return `"text": "${escapedText}"`;
           });
           
           // 3.5 修复其他常见 JSON 字符串字段中的未转义字符
-          fixed = fixed.replace(/"(stem|options|answer|explanation|analysis)":\s*"([\s\S]*?)"(?=\s*[,
-}])/g, (match, field, value) => {
+          // 使用兼容的正则，避免先行断言
+          fixed = fixed.replace(/"(stem|options|answer|explanation|analysis)":\s*"([\s\S]*?)"/g, (match, field, value) => {
+            // 检查后面是否是逗号、换行或结束符
+            const matchIdx = fixed.indexOf(match);
+            const matchEnd = matchIdx + match.length;
+            const afterMatch = fixed.substring(matchEnd, matchEnd + 10);
+            if (!/^\s*[,\n}]/.test(afterMatch) && !afterMatch.includes('"')) {
+              return match; // 不匹配，返回原字符串
+            }
             // 转义值中的特殊字符
             const escapedValue = value
               .replace(/\\/g, '\\\\')  // 先处理已有的反斜杠
@@ -1154,7 +1194,8 @@ app.post("/api/students", async (req, res) => {
       const id = Date.now().toString();
       
       // Normalize text for comparison (remove spaces and common punctuation)
-      const normalize = (t: string) => t.replace(/[\s\p{P}]/gu, '');
+      // 使用兼容的正则：匹配空格和常见标点符号
+      const normalize = (t: string) => t.replace(/[\s\.,;:!?，。；：！？、"'""''（）()\[\]{}【】《》]/g, '');
       const normalizedNew = normalize(text || "");
 
       if (!supabase || useMockMode) {
@@ -1319,9 +1360,16 @@ app.post("/api/students", async (req, res) => {
             questionText = originalText.substring(0, firstOptionIndex).trim();
             const optionsText = originalText.substring(firstOptionIndex).trim();
             
-            // 拆分选项
-            const optionRegex = /([A-D][.．]\s*.*?)(?=[A-D][.．]|$)/g;
-            options = optionsText.match(optionRegex) || [];
+            // 拆分选项 - 使用兼容的方式
+            options = [];
+            const optMatches = optionsText.match(/[A-D][.．]/g);
+            if (optMatches) {
+              for (let i = 0; i < optMatches.length; i++) {
+                const startIdx = optionsText.indexOf(optMatches[i]);
+                const endIdx = i < optMatches.length - 1 ? optionsText.indexOf(optMatches[i + 1]) : optionsText.length;
+                options.push(optionsText.substring(startIdx, endIdx).trim());
+              }
+            }
             
             // 清理选项
             options = options.map(opt => opt.trim());
@@ -1368,9 +1416,16 @@ app.post("/api/students", async (req, res) => {
               questionText = originalText.substring(0, firstOptionIndex).trim();
               const optionsText = originalText.substring(firstOptionIndex).trim();
               
-              // 拆分选项
-              const optionRegex = /([A-D][.．]\s*.*?)(?=[A-D][.．]|$)/g;
-              options = optionsText.match(optionRegex) || [];
+              // 拆分选项 - 使用兼容的方式
+              options = [];
+              const optMatches = optionsText.match(/[A-D][.．]/g);
+              if (optMatches) {
+                for (let i = 0; i < optMatches.length; i++) {
+                  const startIdx = optionsText.indexOf(optMatches[i]);
+                  const endIdx = i < optMatches.length - 1 ? optionsText.indexOf(optMatches[i + 1]) : optionsText.length;
+                  options.push(optionsText.substring(startIdx, endIdx).trim());
+                }
+              }
               
               // 清理选项
               options = options.map(opt => opt.trim());
@@ -1526,7 +1581,8 @@ app.post("/api/students", async (req, res) => {
       }
 
       // Normalize text for comparison (remove spaces and common punctuation)
-      const normalize = (t: string) => t.replace(/[\s\p{P}]/gu, '');
+      // 使用兼容的正则：匹配空格和常见标点符号
+      const normalize = (t: string) => t.replace(/[\s\.,;:!?，。；：！？、"'""''（）()\[\]{}【】《》]/g, '');
 
       if (!supabase || useMockMode) {
         // Mock mode
@@ -1784,9 +1840,16 @@ app.post("/api/students", async (req, res) => {
           questionText = originalText.substring(0, firstOptionIndex).trim();
           const optionsText = originalText.substring(firstOptionIndex).trim();
           
-          // 拆分选项
-          const optionRegex = /([A-D][.．]\s*.*?)(?=[A-D][.．]|$)/g;
-          options = optionsText.match(optionRegex) || [];
+          // 拆分选项 - 使用兼容的方式
+          options = [];
+          const optMatches = optionsText.match(/[A-D][.．]/g);
+          if (optMatches) {
+            for (let i = 0; i < optMatches.length; i++) {
+              const startIdx = optionsText.indexOf(optMatches[i]);
+              const endIdx = i < optMatches.length - 1 ? optionsText.indexOf(optMatches[i + 1]) : optionsText.length;
+              options.push(optionsText.substring(startIdx, endIdx).trim());
+            }
+          }
           
           // 清理选项
           options = options.map(opt => opt.trim());
