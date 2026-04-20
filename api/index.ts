@@ -868,7 +868,7 @@ app.post("/api/students", async (req, res) => {
               const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
               const requestBody = {
                 model: modelscopeModelId,
-                max_tokens: 800,
+                max_tokens: 2000,
                 temperature: 0.3,
                 messages: [
                   {
