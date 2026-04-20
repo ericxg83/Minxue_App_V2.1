@@ -746,12 +746,16 @@ app.post("/api/students", async (req, res) => {
                       role: "user",
                       content: [
                         { "type": "text", "text": prompt },
-                        {
-                          "type": "image_url",
-                          "image_url": {
-                            "url": base64Image
-                          }
-                        }
+                        (() => {
+                          // 百度千帆需要使用 base64 格式
+                          const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+                          return {
+                            "type": "image_url",
+                            "image_url": {
+                              "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`
+                            }
+                          };
+                        })()
                       ]
                     }
                   ]
@@ -1143,12 +1147,16 @@ app.post("/api/students", async (req, res) => {
               role: "user",
               content: [
                 { "type": "text", "text": prompt },
-                {
-                  "type": "image_url",
-                  "image_url": {
-                    "url": base64Image
-                  }
-                }
+                (() => {
+                  // 百度千帆需要使用 base64 格式
+                  const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+                  return {
+                    "type": "image_url",
+                    "image_url": {
+                      "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`
+                    }
+                  };
+                })()
               ]
             }
           ]
