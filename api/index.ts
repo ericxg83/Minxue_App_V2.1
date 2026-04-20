@@ -776,7 +776,9 @@ app.post("/api/students", async (req, res) => {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "Authorization": `Bearer ${dashscopeApiKey}`
+                  "Authorization": `Bearer ${dashscopeApiKey}`,
+                  // 阿里云百炼也支持 api-key 方式
+                  "X-DashScope-Api-Key": dashscopeApiKey
                 },
                 body: requestBodyStr,
                 signal: controller.signal
@@ -1156,7 +1158,9 @@ app.post("/api/students", async (req, res) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${dashscopeApiKey}`
+          "Authorization": `Bearer ${dashscopeApiKey}`,
+          // 阿里云百炼也支持 api-key 方式
+          "X-DashScope-Api-Key": dashscopeApiKey
         },
         body: JSON.stringify({
           model: dashscopeModelId,
