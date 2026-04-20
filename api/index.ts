@@ -145,13 +145,14 @@ async function cropImage(base64Image: string, box: { x: number; y: number; width
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-// ModelScope (魔搭) API Configuration - 已验证可用
+// ModelScope (魔搭) API Configuration - 使用已验证可用的模型
 const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "ms-dae707ae-bcc4-4d7e-aa83-e2165d0cdbf5";
-const modelscopeModelId = "Qwen/Qwen2-VL-7B-Instruct";
+// 使用 Kimi-K2.5 - 之前测试过能正常工作
+const modelscopeModelId = "moonshotai/Kimi-K2.5";
 const modelscopeEndpoint = "https://api-inference.modelscope.cn/v1/chat/completions";
 
 console.log("==============================================");
-console.log("【使用魔搭 ModelScope - Qwen2-VL-7B】");
+console.log("【使用魔搭 ModelScope - Kimi-K2.5】");
 console.log("==============================================");
 console.log("Endpoint:", modelscopeEndpoint);
 console.log("Model:", modelscopeModelId);
