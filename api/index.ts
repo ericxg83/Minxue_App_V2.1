@@ -145,23 +145,22 @@ async function cropImage(base64Image: string, box: { x: number; y: number; width
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-// SiliconFlow API Configuration
-// 使用硅基流动平台 - 国内访问友好，支持多种开源模型
-// 获取 API Key: https://cloud.siliconflow.cn/
-const siliconFlowApiKey = process.env.SILICONFLOW_API_KEY || "sk-替换为你的APIKey";
-const siliconFlowModelId = "Qwen/Qwen2-VL-72B-Instruct";
-const siliconFlowEndpoint = "https://api.siliconflow.cn/v1/chat/completions";
+// Baidu Qianfan API Configuration
+// 使用百度千帆平台 - 支持 Qwen-VL 等视觉模型
+// 获取 API Key: https://console.bce.baidu.com/qianfan/overview
+const qianfanApiKey = process.env.QIANFAN_API_KEY || "替换为你的APIKey";
+const qianfanModelId = "qwen-vl-max";
+const qianfanEndpoint = "https://qianfan.baidubce.com/v2/chat/completions";
 
 // 强制打印调试信息
 console.log("==============================================");
-console.log("【使用硅基流动 - Qwen2-VL-72B-Instruct】");
+console.log("【使用百度千帆 - qwen-vl-max】");
 console.log("==============================================");
-console.log("Endpoint:", siliconFlowEndpoint);
-console.log("Model:", siliconFlowModelId);
-console.log("API Key 存在:", !!siliconFlowApiKey);
-console.log("API Key 长度:", siliconFlowApiKey?.length || 0);
-console.log("API Key 前缀:", siliconFlowApiKey ? siliconFlowApiKey.substring(0, 20) + "..." : "未设置");
-console.log("实际使用的 API Key 前10位:", siliconFlowApiKey ? siliconFlowApiKey.substring(0, 10) : "未设置");
+console.log("Endpoint:", qianfanEndpoint);
+console.log("Model:", qianfanModelId);
+console.log("API Key 存在:", !!qianfanApiKey);
+console.log("API Key 长度:", qianfanApiKey?.length || 0);
+console.log("API Key 前缀:", qianfanApiKey ? qianfanApiKey.substring(0, 20) + "..." : "未设置");
 console.log("==============================================");
 
 // 检查环境变量
@@ -178,9 +177,9 @@ console.log("SUPABASE_URL value:", supabaseUrl || "NOT SET");
 console.log("SUPABASE_ANON_KEY present:", !!supabaseKey);
 console.log("SUPABASE_ANON_KEY length:", supabaseKey?.length || 0);
 console.log("SUPABASE_ANON_KEY preview:", supabaseKey ? `${supabaseKey.substring(0, 20)}...` : "NOT SET");
-console.log("SILICONFLOW_API_KEY present:", !!siliconFlowApiKey);
-console.log("SILICONFLOW_MODEL_ID:", siliconFlowModelId);
-console.log("SILICONFLOW_ENDPOINT:", siliconFlowEndpoint);
+console.log("QIANFAN_API_KEY present:", !!qianfanApiKey);
+console.log("QIANFAN_MODEL_ID:", qianfanModelId);
+console.log("QIANFAN_ENDPOINT:", qianfanEndpoint);
 console.log("=".repeat(60) + "\n");
 
 // 全局变量，供所有函数访问
@@ -678,7 +677,7 @@ app.post("/api/students", async (req, res) => {
       if (!base64Image) return res.status(400).json({ error: "图片不能为空" });
 
       const imageSizeKB = Math.round(base64Image.length * 0.75 / 1024);
-      console.log(`Starting AI Analysis with SiliconFlow (${siliconFlowModelId}). Image size: ~${imageSizeKB}KB.`);
+      console.log(`Starting AI Analysis with Qianfan (${qianfanModelId}). Image size: ~${imageSizeKB}KB.`);
       
       // 检查图片大小，超过 2MB 建议压缩
       if (imageSizeKB > 2048) {
@@ -727,19 +726,19 @@ app.post("/api/students", async (req, res) => {
                 await new Promise(resolve => setTimeout(resolve, 1000));
               }
 
-              // SiliconFlow API 请求格式 (OpenAI 兼容)
-              console.log("发送请求到:", siliconFlowEndpoint);
-              console.log("使用模型:", siliconFlowModelId);
-              console.log("API Key 前10位:", siliconFlowApiKey ? siliconFlowApiKey.substring(0, 10) + "..." : "未设置");
-              
-              response = await fetch(siliconFlowEndpoint, {
+              // 百度千帆 API 请求格式 (OpenAI 兼容)
+              console.log("发送请求到:", qianfanEndpoint);
+              console.log("使用模型:", qianfanModelId);
+              console.log("API Key 前10位:", qianfanApiKey ? qianfanApiKey.substring(0, 10) + "..." : "未设置");
+
+              response = await fetch(qianfanEndpoint, {
                 method: "POST",
                 headers: {
                   "Content-Type": "application/json",
-                  "Authorization": `Bearer ${siliconFlowApiKey}`
+                  "Authorization": `Bearer ${qianfanApiKey}`
                 },
                 body: JSON.stringify({
-                  model: siliconFlowModelId, 
+                  model: qianfanModelId,
                   max_tokens: 1500,
                   temperature: 0.3,
                   messages: [
@@ -747,16 +746,12 @@ app.post("/api/students", async (req, res) => {
                       role: "user",
                       content: [
                         { "type": "text", "text": prompt },
-                        (() => {
-                          // 提取纯 base64 数据（去掉 data:image/xxx;base64, 前缀）
-                          const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-                          return {
-                            "type": "image_url",
-                            "image_url": {
-                              "url": `data:image/jpeg;base64,${base64Data}`
-                            }
-                          };
-                        })()
+                        {
+                          "type": "image_url",
+                          "image_url": {
+                            "url": base64Image
+                          }
+                        }
                       ]
                     }
                   ]
@@ -785,12 +780,12 @@ app.post("/api/students", async (req, res) => {
 
       clearTimeout(timeoutId);
       
-      // 检查 SiliconFlow API 响应类型
+      // 检查百度千帆 API 响应类型
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
-        console.error("SiliconFlow API returned non-JSON response:", text);
-        throw new Error(`SiliconFlow API 响应异常 (非 JSON): ${text.substring(0, 500)}`);
+        console.error("Qianfan API returned non-JSON response:", text);
+        throw new Error(`Qianfan API 响应异常 (非 JSON): ${text.substring(0, 500)}`);
       }
 
       const data: any = await response.json();
@@ -798,26 +793,26 @@ app.post("/api/students", async (req, res) => {
         console.error("API Error Details:", {
           status: response.status,
           statusText: response.statusText,
-          endpoint: siliconFlowEndpoint,
-          model: siliconFlowModelId,
+          endpoint: qianfanEndpoint,
+          model: qianfanModelId,
           response: data
         });
-        return res.status(response.status).json({ 
-          error: "API 返回错误", 
+        return res.status(response.status).json({
+          error: "API 返回错误",
           status: response.status,
-          details: data 
+          details: data
         });
       }
 
       // 检查 API 响应格式是否有效
       if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
         console.error("Invalid API Response Format:", {
-          endpoint: siliconFlowEndpoint,
-          model: siliconFlowModelId,
+          endpoint: qianfanEndpoint,
+          model: qianfanModelId,
           response: data
         });
-        return res.status(500).json({ 
-          error: "AI API 返回格式异常", 
+        return res.status(500).json({
+          error: "AI API 返回格式异常",
           details: "API 响应中缺少 choices 字段或格式不正确",
           response: data
         });
@@ -825,12 +820,12 @@ app.post("/api/students", async (req, res) => {
 
       if (!data.choices[0].message || !data.choices[0].message.content) {
         console.error("Invalid API Response Content:", {
-          endpoint: siliconFlowEndpoint,
-          model: siliconFlowModelId,
+          endpoint: qianfanEndpoint,
+          model: qianfanModelId,
           choice: data.choices[0]
         });
-        return res.status(500).json({ 
-          error: "AI API 返回内容异常", 
+        return res.status(500).json({
+          error: "AI API 返回内容异常",
           details: "API 响应中缺少 message.content 字段",
           response: data
         });
@@ -1134,30 +1129,26 @@ app.post("/api/students", async (req, res) => {
 
       // SiliconFlow API 请求格式 (OpenAI 兼容)
       let response: Response;
-      response = await fetch(siliconFlowEndpoint, {
+      response = await fetch(qianfanEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${siliconFlowApiKey}`
+          "Authorization": `Bearer ${qianfanApiKey}`
         },
         body: JSON.stringify({
-          model: siliconFlowModelId,
+          model: qianfanModelId,
           max_tokens: 2000,
           messages: [
             {
               role: "user",
               content: [
                 { "type": "text", "text": prompt },
-                (() => {
-                  // 提取纯 base64 数据（去掉 data:image/xxx;base64, 前缀）
-                  const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
-                  return {
-                    "type": "image_url",
-                    "image_url": {
-                      "url": `data:image/jpeg;base64,${base64Data}`
-                    }
-                  };
-                })()
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": base64Image
+                  }
+                }
               ]
             }
           ]
