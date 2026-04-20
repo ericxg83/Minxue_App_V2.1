@@ -747,11 +747,11 @@ app.post("/api/students", async (req, res) => {
                       role: "user",
                       content: [
                         { "type": "text", "text": prompt },
-                        { 
-                          "type": "image_url", 
-                          "image_url": { 
-                            "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}` 
-                          } 
+                        {
+                          "type": "image_url",
+                          "image_url": {
+                            "url": base64Image
+                          }
                         }
                       ]
                     }
@@ -1144,11 +1144,11 @@ app.post("/api/students", async (req, res) => {
               role: "user",
               content: [
                 { "type": "text", "text": prompt },
-                { 
-                  "type": "image_url", 
-                  "image_url": { 
-                    "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}` 
-                  } 
+                {
+                  "type": "image_url",
+                  "image_url": {
+                    "url": base64Image
+                  }
                 }
               ]
             }
