@@ -815,7 +815,7 @@ export default function App() {
     try {
       // 1. 压缩图片以减少传输体积和 AI 处理时间
       // 大幅降低图片分辨率和质量，确保在 25 秒内完成识别
-      const compressedBase64 = await compressImage(base64Data, 600, 0.5);
+      const compressedBase64 = await compressImage(base64Data, 400, 0.3);
       
       const res = await fetch('/api/analyze-question', {
         method: 'POST',
@@ -955,7 +955,7 @@ export default function App() {
         setTimeout(async () => {
           try {
             // 压缩图片以减少传输体积
-            const compressedBase64 = await compressImage(result, 600, 0.5);
+            const compressedBase64 = await compressImage(result, 400, 0.3);
             
             const res = await fetch('/api/analyze-question', {
               method: 'POST',
@@ -1148,7 +1148,7 @@ export default function App() {
         setTimeout(async () => {
           try {
             // 压缩图片以减少传输体积
-            const compressedBase64 = await compressImage(result, 600, 0.5);
+            const compressedBase64 = await compressImage(result, 400, 0.3);
             
             const res = await fetch('/api/analyze-question', {
               method: 'POST',
@@ -2682,7 +2682,7 @@ export default function App() {
                                 setTimeout(async () => {
                                   try {
                                     // 压缩图片以减少传输体积
-                                    const compressedBase64 = await compressImage(result.image, 600, 0.5);
+                                    const compressedBase64 = await compressImage(result.image, 400, 0.3);
                                     
                                     const res = await fetch('/api/analyze-question', {
                                       method: 'POST',
