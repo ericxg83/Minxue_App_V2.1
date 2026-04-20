@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: minxue-app
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MODELSCOPE_API_KEY
+        sync: false
+      - key: MODELSCOPE_MODEL_ID
+        value: moonshotai/Kimi-K2.5
+      - key: MODELSCOPE_ENDPOINT
+        value: https://api-inference.modelscope.cn/v1/chat/completions
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
