@@ -150,8 +150,8 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 // 注意：请替换为你自己的 API Key
 const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "ms-dae707ae-bcc4-4d7e-aa83-e2165d0cdbf5";
 // 使用魔搭支持的视觉模型 (注意：必须是 ModelScope API 支持的模型)
-// 支持的多模态模型：Qwen/Qwen2.5-VL-72B-Instruct, Qwen/Qwen-VL-Chat, deepseek-vl-7b-chat
-const modelscopeModelId = process.env.MODELSCOPE_MODEL_ID || "Qwen/Qwen-VL-Chat";
+// 支持的多模态模型：Qwen/Qwen2.5-VL-72B-Instruct
+const modelscopeModelId = process.env.MODELSCOPE_MODEL_ID || "Qwen/Qwen2.5-VL-72B-Instruct";
 const modelscopeEndpoint = process.env.MODELSCOPE_ENDPOINT || "https://api-inference.modelscope.cn/v1/chat/completions";
 
 console.log("==============================================");
