@@ -747,12 +747,16 @@ app.post("/api/students", async (req, res) => {
                       role: "user",
                       content: [
                         { "type": "text", "text": prompt },
-                        {
-                          "type": "image_url",
-                          "image_url": {
-                            "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`
-                          }
-                        }
+                        (() => {
+                          // 提取纯 base64 数据（去掉 data:image/xxx;base64, 前缀）
+                          const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+                          return {
+                            "type": "image_url",
+                            "image_url": {
+                              "url": `data:image/jpeg;base64,${base64Data}`
+                            }
+                          };
+                        })()
                       ]
                     }
                   ]
@@ -1144,12 +1148,16 @@ app.post("/api/students", async (req, res) => {
               role: "user",
               content: [
                 { "type": "text", "text": prompt },
-                {
-                  "type": "image_url",
-                  "image_url": {
-                    "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}`
-                  }
-                }
+                (() => {
+                  // 提取纯 base64 数据（去掉 data:image/xxx;base64, 前缀）
+                  const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, '');
+                  return {
+                    "type": "image_url",
+                    "image_url": {
+                      "url": `data:image/jpeg;base64,${base64Data}`
+                    }
+                  };
+                })()
               ]
             }
           ]
