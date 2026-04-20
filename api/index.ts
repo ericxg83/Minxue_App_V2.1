@@ -145,24 +145,22 @@ async function cropImage(base64Image: string, box: { x: number; y: number; width
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-// Qwen API Configuration
-// 强制使用魔搭配置（临时解决方案）
-// 临时硬编码 API Key 用于测试
-const qwenApiKey = process.env.MODELSCOPE_API_KEY || "ms-dae707ae-bcc4-4d7e-aa83-e2165d0cdbf5";
-// 使用魔搭 API-Inference 支持的视觉模型
-// moonshotai/Kimi-K2.5 支持视觉多模态理解，适合 OCR 识别
-const qwenModelId = "moonshotai/Kimi-K2.5";
-const qwenEndpoint = "https://api-inference.modelscope.cn/v1/chat/completions";
+// SiliconFlow API Configuration
+// 使用硅基流动平台 - 国内访问友好，支持多种开源模型
+// 获取 API Key: https://cloud.siliconflow.cn/
+const siliconFlowApiKey = process.env.SILICONFLOW_API_KEY || "sk-替换为你的APIKey";
+const siliconFlowModelId = "Qwen/Qwen2-VL-72B-Instruct";
+const siliconFlowEndpoint = "https://api.siliconflow.cn/v1/chat/completions";
 
 // 强制打印调试信息
 console.log("==============================================");
-console.log("【强制使用魔搭配置 - 版本 2024-04-17-v2】");
+console.log("【使用硅基流动 - Qwen2-VL-72B-Instruct】");
 console.log("==============================================");
-console.log("Endpoint:", qwenEndpoint);
-console.log("Model:", qwenModelId);
-console.log("API Key 存在:", !!qwenApiKey);
-console.log("API Key 长度:", qwenApiKey?.length || 0);
-console.log("API Key 前缀:", qwenApiKey ? qwenApiKey.substring(0, 20) + "..." : "未设置");
+console.log("Endpoint:", siliconFlowEndpoint);
+console.log("Model:", siliconFlowModelId);
+console.log("API Key 存在:", !!siliconFlowApiKey);
+console.log("API Key 长度:", siliconFlowApiKey?.length || 0);
+console.log("API Key 前缀:", siliconFlowApiKey ? siliconFlowApiKey.substring(0, 20) + "..." : "未设置");
 console.log("==============================================");
 
 // 检查环境变量
@@ -179,9 +177,9 @@ console.log("SUPABASE_URL value:", supabaseUrl || "NOT SET");
 console.log("SUPABASE_ANON_KEY present:", !!supabaseKey);
 console.log("SUPABASE_ANON_KEY length:", supabaseKey?.length || 0);
 console.log("SUPABASE_ANON_KEY preview:", supabaseKey ? `${supabaseKey.substring(0, 20)}...` : "NOT SET");
-console.log("QWEN_API_KEY present:", !!qwenApiKey);
-console.log("QWEN_MODEL_ID:", qwenModelId);
-console.log("QWEN_ENDPOINT:", qwenEndpoint);
+console.log("SILICONFLOW_API_KEY present:", !!siliconFlowApiKey);
+console.log("SILICONFLOW_MODEL_ID:", siliconFlowModelId);
+console.log("SILICONFLOW_ENDPOINT:", siliconFlowEndpoint);
 console.log("=".repeat(60) + "\n");
 
 // 全局变量，供所有函数访问
@@ -671,118 +669,49 @@ app.post("/api/students", async (req, res) => {
   // API: Analyze Question using QWEN (DashScope)
   app.post("/api/analyze-question", async (req, res) => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort("timeout"), 55000); // 55秒超时保护（Vercel限制60秒）
+    // Vercel Hobby 套餐限制 30 秒，设置 25 秒超时以确保安全
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 25000);
 
     try {
       const { base64Image } = req.body;
       if (!base64Image) return res.status(400).json({ error: "图片不能为空" });
 
       const imageSizeKB = Math.round(base64Image.length * 0.75 / 1024);
-      console.log(`Starting AI Analysis with QWEN (${qwenModelId}). Image size: ~${imageSizeKB}KB.`);
+      console.log(`Starting AI Analysis with SiliconFlow (${siliconFlowModelId}). Image size: ~${imageSizeKB}KB.`);
       
-      const prompt = `你是一个顶级的试卷数字化专家。请对这张试卷进行深度的版面分析（Layout Analysis），并严格按照试卷中明确标注的题号来精准识别出每一道完整的题目。
+      // 检查图片大小，超过 2MB 建议压缩
+      if (imageSizeKB > 2048) {
+        console.warn(`Image size (${imageSizeKB}KB) is too large, may cause timeout`);
+        return res.status(400).json({ 
+          error: "图片过大", 
+          details: `图片大小为 ${imageSizeKB}KB，超过 2MB 限制。请压缩图片后重试。`,
+          suggestion: "建议使用较小的图片（不超过 2MB）以获得更好的识别速度"
+        });
+      }
+      
+      const prompt = `识别试卷题目，返回标准JSON格式：
 
-任务：
-1. 首先，仔细观察试卷上的所有题号，包括1、2、3、4、5等。
-2. 然后，为每个题号创建一个独立的题目条目，确保每个题号对应一道完整的题目。
-3. 最后，按照题号的顺序（1、2、3、4、5）返回所有识别出的题目。
+任务：识别图片中的所有题目，按题号顺序返回。
 
-具体要求：
-1. **边界框生成**：
-   - 为每一道题目生成一个精确的边界框 {x, y, width, height}。
-   - 边界框必须从题号的最左上角开始，到该题最后一个选项的最右下角结束。
-   - 边界框必须包含完整的题号、题干、所有选项以及该题配套的任何插图。
-   - 坐标系：左上角为 (0,0)，右下角为 (100,100)。请确保坐标是相对于整张图片的百分比。
+字段说明：
+- number: 题号（字符串）
+- box: {x, y, width, height} 百分比坐标（数字）
+- text: 完整题目文字（字符串）
+- stem: 题干（字符串）
+- options: 选项数组（字符串数组）
+- hasImage: 是否有配图（布尔值）
+- type: "objective"或"subjective"（字符串）
 
-2. **内容提取**：
-   - number: 提取题号（如 "1", "2", "3" 等）。
-   - text: 提取该题的所有文字内容，包括题号、题干和选项。
-   - stem: 仅提取题干部分，不包含题号和选项。
-   - options: 提取选项列表（如果是选择题），每个选项必须包含选项字母和内容。
-   - hasImage: 如果题目中包含几何图形、函数图、照片等非文字内容，请设为 true。
-   - studentAnswer: 提取学生手写的答案（如果有）。
-   - grade: 提取批改状态，值为 "correct"（正确，有红勾）、"incorrect"（错误，有红叉）或 "ungraded"（未批改）。
-   - type: 题目类型，值为 "objective"（客观题，如选择、填空）或 "subjective"（主观题，如解答、证明）。
-   - correctAnswer: 提取正确答案（如果能识别）。
+严格要求：
+1. 必须返回合法的JSON格式
+2. 字符串必须用双引号包裹
+3. 数组元素之间必须用逗号分隔
+4. 坐标使用0-100的数字
+5. 不要返回markdown代码块，只返回纯JSON
+6. 确保所有括号正确闭合
 
-3. **格式要求**：
-   - 所有数学符号和公式必须使用标准 LaTeX 格式。
-   - 按题目在试卷上的自然阅读顺序返回，即1、2、3、4、5的顺序。
-
-重要提示：
-- 确保识别出试卷上的所有题目，包括最后几道题目
-- 确保每个题目都是完整的，不要只提取部分内容
-- 确保边界框覆盖整个题目，从题号的最左上角开始到该题最后一个选项的最右下角结束
-- 不要合并多个题目为一个，也不要将一个题目拆分为多个
-- 确保边界框的大小和位置准确，不要过大或过小
-- 确保返回的 JSON 格式正确，不包含任何额外的文字
-
-仅返回 JSON 格式，不要包含任何解释文字。
-{
-  "questions": [
-    {
-      "number": "1",
-      "box": {"x": 10.5, "y": 20.1, "width": 80.0, "height": 12.5},
-      "text": "1. 题目内容...",
-      "stem": "题目内容...",
-      "options": ["A. 选项内容", "B. 选项内容", "C. 选项内容", "D. 选项内容"],
-      "hasImage": false,
-      "studentAnswer": "A",
-      "grade": "correct",
-      "type": "objective",
-      "correctAnswer": "A"
-    },
-    {
-      "number": "2",
-      "box": {"x": 10.5, "y": 35.1, "width": 80.0, "height": 10.5},
-      "text": "2. 题目内容...",
-      "stem": "题目内容...",
-      "options": ["A. 选项内容", "B. 选项内容", "C. 选项内容", "D. 选项内容"],
-      "hasImage": false,
-      "studentAnswer": "C",
-      "grade": "incorrect",
-      "type": "objective",
-      "correctAnswer": "B"
-    },
-    {
-      "number": "3",
-      "box": {"x": 10.5, "y": 48.1, "width": 80.0, "height": 11.5},
-      "text": "3. 题目内容...",
-      "stem": "题目内容...",
-      "options": [],
-      "hasImage": false,
-      "studentAnswer": "4",
-      "grade": "ungraded",
-      "type": "objective",
-      "correctAnswer": "4"
-    },
-    {
-      "number": "4",
-      "box": {"x": 10.5, "y": 62.1, "width": 80.0, "height": 13.5},
-      "text": "4. 题目内容...",
-      "stem": "题目内容...",
-      "options": [],
-      "hasImage": true,
-      "studentAnswer": "",
-      "grade": "ungraded",
-      "type": "subjective",
-      "correctAnswer": ""
-    },
-    {
-      "number": "5",
-      "box": {"x": 10.5, "y": 78.1, "width": 80.0, "height": 12.5},
-      "text": "5. 题目内容...",
-      "stem": "题目内容...",
-      "options": [],
-      "hasImage": false,
-      "studentAnswer": "",
-      "grade": "ungraded",
-      "type": "subjective",
-      "correctAnswer": ""
-    }
-  ],
-  "subject": "数学"
-}`;
+正确格式示例：
+{"questions":[{"number":"1","box":{"x":10,"y":20,"width":80,"height":15},"text":"1.题目内容","stem":"题目内容","options":["A.xxx","B.xxx"],"hasImage":false,"type":"objective"}],"subject":"数学"}`;
 
       // 减少重试次数，提高响应速度
       const maxRetries = 1;
@@ -790,80 +719,45 @@ app.post("/api/students", async (req, res) => {
       let response: Response | null = null;
       let lastError: any = null;
 
-      // 检查是否使用 Gemini API
-      const isGemini = qwenEndpoint.includes('generativelanguage.googleapis.com');
-
       while (attempt < maxRetries) {
-        try {
-          if (attempt > 0) {
-            console.log(`Retrying AI Analysis (attempt ${attempt + 1}/${maxRetries})...`);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-          }
+            try {
+              if (attempt > 0) {
+                console.log(`Retrying AI Analysis (attempt ${attempt + 1}/${maxRetries})...`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+              }
 
-          if (isGemini) {
-            // Gemini API 请求格式
-            const base64Data = base64Image.startsWith('data:') ? base64Image.split(',')[1] : base64Image;
-            
-            response = await fetch(qwenEndpoint, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${qwenApiKey}`
-              },
-              body: JSON.stringify({
-                contents: [
-                  {
-                    parts: [
-                      { "text": prompt },
-                      {
-                        inline_data: {
-                          mime_type: "image/jpeg",
-                          data: base64Data
+              // SiliconFlow API 请求格式 (OpenAI 兼容)
+              console.log("发送请求到:", siliconFlowEndpoint);
+              console.log("使用模型:", siliconFlowModelId);
+              console.log("API Key 前10位:", siliconFlowApiKey ? siliconFlowApiKey.substring(0, 10) + "..." : "未设置");
+              
+              response = await fetch(siliconFlowEndpoint, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${siliconFlowApiKey}`
+                },
+                body: JSON.stringify({
+                  model: siliconFlowModelId, 
+                  max_tokens: 1500,
+                  temperature: 0.3,
+                  messages: [
+                    {
+                      role: "user",
+                      content: [
+                        { "type": "text", "text": prompt },
+                        { 
+                          "type": "image_url", 
+                          "image_url": { 
+                            "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}` 
+                          } 
                         }
-                      }
-                    ]
-                  }
-                ],
-                generationConfig: {
-                  max_output_tokens: 2000
-                }
-              }),
-              signal: controller.signal
-            });
-          } else {
-            // OpenAI 风格 API 请求格式
-            console.log("发送请求到:", qwenEndpoint);
-            console.log("使用模型:", qwenModelId);
-            console.log("API Key 前10位:", qwenApiKey ? qwenApiKey.substring(0, 10) + "..." : "未设置");
-            
-            response = await fetch(qwenEndpoint, {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${qwenApiKey}`
-              },
-              body: JSON.stringify({
-                model: qwenModelId, 
-                max_tokens: 2000, // 减少最大 tokens，提高响应速度
-                temperature: 0.3, // 降低温度，减少随机性，提高速度
-                messages: [
-                  {
-                    role: "user",
-                    content: [
-                      { "type": "text", "text": prompt },
-                      { 
-                        "type": "image_url", 
-                        "image_url": { 
-                          "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}` 
-                        } 
-                      }
-                    ]
-                  }
-                ]
-              }),
-              signal: controller.signal
-            });
-          }
+                      ]
+                    }
+                  ]
+                }),
+                signal: controller.signal
+              });
 
           if (response.ok || (response.status >= 400 && response.status < 500 && response.status !== 429)) {
             break;
@@ -886,12 +780,12 @@ app.post("/api/students", async (req, res) => {
 
       clearTimeout(timeoutId);
       
-      // 检查 QWEN API 响应类型
+      // 检查 SiliconFlow API 响应类型
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
-        console.error("QWEN API returned non-JSON response:", text);
-        throw new Error(`QWEN API 响应异常 (非 JSON): ${text.substring(0, 500)}`);
+        console.error("SiliconFlow API returned non-JSON response:", text);
+        throw new Error(`SiliconFlow API 响应异常 (非 JSON): ${text.substring(0, 500)}`);
       }
 
       const data: any = await response.json();
@@ -899,14 +793,41 @@ app.post("/api/students", async (req, res) => {
         console.error("API Error Details:", {
           status: response.status,
           statusText: response.statusText,
-          endpoint: qwenEndpoint,
-          model: qwenModelId,
+          endpoint: siliconFlowEndpoint,
+          model: siliconFlowModelId,
           response: data
         });
         return res.status(response.status).json({ 
           error: "API 返回错误", 
           status: response.status,
           details: data 
+        });
+      }
+
+      // 检查 API 响应格式是否有效
+      if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+        console.error("Invalid API Response Format:", {
+          endpoint: siliconFlowEndpoint,
+          model: siliconFlowModelId,
+          response: data
+        });
+        return res.status(500).json({ 
+          error: "AI API 返回格式异常", 
+          details: "API 响应中缺少 choices 字段或格式不正确",
+          response: data
+        });
+      }
+
+      if (!data.choices[0].message || !data.choices[0].message.content) {
+        console.error("Invalid API Response Content:", {
+          endpoint: siliconFlowEndpoint,
+          model: siliconFlowModelId,
+          choice: data.choices[0]
+        });
+        return res.status(500).json({ 
+          error: "AI API 返回内容异常", 
+          details: "API 响应中缺少 message.content 字段",
+          response: data
         });
       }
 
@@ -922,17 +843,27 @@ app.post("/api/students", async (req, res) => {
         console.warn("Failed to parse AI response as JSON:", e.message);
       }
 
-      // 移除可能存在的 Markdown 代码块标记
-      content = content.replace(/```json\n?|```/g, '').trim();
+      // 记录原始响应用于调试
+      console.log("Raw AI Response (first 500 chars):", content.substring(0, 500));
+      
+      // 移除可能存在的 Markdown 代码块标记（包括 ```json 和 ```）
+      content = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
       
       // 移除可能存在的单个反引号（AI 有时会用 ` 包裹 JSON）
       content = content.replace(/^`|`$/g, '').trim();
       
       // 尝试提取 JSON 对象（如果 AI 返回了多余的文字）
+      // 使用更宽松的模式匹配 JSON 对象
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         content = jsonMatch[0];
       }
+      
+      // 再次清理可能的 markdown 标记
+      content = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+      
+      // 移除可能的 "json" 前缀
+      content = content.replace(/^json\s*/i, '').trim();
       
       const tryParse = (str: string) => {
         try {
@@ -1002,7 +933,14 @@ app.post("/api/students", async (req, res) => {
             return `"${field}": "${escapedValue}"`;
           });
           
-          // 4. 如果 JSON 看起来不完整（例如没有闭合的括号），尝试补齐
+          // 4. 修复数组和对象中缺少逗号的问题
+          // 修复 "} {" 为 "}, {" 和 "] [" 为 "], ["
+          fixed = fixed.replace(/\}\s*\{/g, '}, {');
+          fixed = fixed.replace(/\]\s*\[/g, '], [');
+          fixed = fixed.replace(/"\s*\{/g, '", {');
+          fixed = fixed.replace(/"\s*\[/g, '", [');
+          
+          // 5. 如果 JSON 看起来不完整（例如没有闭合的括号），尝试补齐
           const openBraces = (fixed.match(/\{/g) || []).length;
           const closeBraces = (fixed.match(/\}/g) || []).length;
           if (openBraces > closeBraces) {
@@ -1019,6 +957,10 @@ app.post("/api/students", async (req, res) => {
               fixed += '}'.repeat(newOpenBraces - newCloseBraces);
             }
           }
+          
+          // 6. 移除多余的逗号（在 } 或 ] 之前的逗号）
+          fixed = fixed.replace(/,\s*}/g, '}');
+          fixed = fixed.replace(/,\s*]/g, ']');
           
           try {
             return JSON.parse(fixed);
@@ -1133,7 +1075,16 @@ app.post("/api/students", async (req, res) => {
         console.error("Analyze Question Error: Request timed out");
         return res.status(504).json({ 
           error: "识题请求超时", 
-          details: { message: "后端请求 QWEN API 超时，请检查图片大小或网络状况", reason: "timeout" } 
+          details: { 
+            message: "AI 识别超时（25秒），请稍后重试或尝试以下方法：", 
+            reason: "timeout",
+            suggestions: [
+              "压缩图片大小（建议不超过 1MB）",
+              "减少图片中的题目数量",
+              "检查网络连接",
+              "稍后重试"
+            ]
+          } 
         });
       }
       console.error("Analyze Question Error:", error);
@@ -1176,69 +1127,34 @@ app.post("/api/students", async (req, res) => {
   "options": ["A. 选项内容", "B. 选项内容", "C. 选项内容", "D. 选项内容"]
 }`;
 
-      // 检查是否使用 Gemini API
-      const isGemini = qwenEndpoint.includes('generativelanguage.googleapis.com');
-      
+      // SiliconFlow API 请求格式 (OpenAI 兼容)
       let response: Response;
-      if (isGemini) {
-        // Gemini API 请求格式
-        const base64Data = base64Image.startsWith('data:') ? base64Image.split(',')[1] : base64Image;
-        
-        response = await fetch(qwenEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${qwenApiKey}`
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { "text": prompt },
-                  {
-                    inline_data: {
-                      mime_type: "image/jpeg",
-                      data: base64Data
-                    }
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              max_output_tokens: 2000
+      response = await fetch(siliconFlowEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${siliconFlowApiKey}`
+        },
+        body: JSON.stringify({
+          model: siliconFlowModelId,
+          max_tokens: 2000,
+          messages: [
+            {
+              role: "user",
+              content: [
+                { "type": "text", "text": prompt },
+                { 
+                  "type": "image_url", 
+                  "image_url": { 
+                    "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}` 
+                  } 
+                }
+              ]
             }
-          }),
-          signal: controller.signal
-        });
-      } else {
-        // OpenAI 风格 API 请求格式
-        response = await fetch(qwenEndpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${qwenApiKey}`
-          },
-          body: JSON.stringify({
-            model: qwenModelId,
-            max_tokens: 2000,
-            messages: [
-              {
-                role: "user",
-                content: [
-                  { "type": "text", "text": prompt },
-                  { 
-                    "type": "image_url", 
-                    "image_url": { 
-                      "url": base64Image.startsWith('data:') ? base64Image : `data:image/jpeg;base64,${base64Image}` 
-                    } 
-                  }
-                ]
-              }
-            ]
-          }),
-          signal: controller.signal
-        });
-      }
+          ]
+        }),
+        signal: controller.signal
+      });
 
       clearTimeout(timeoutId);
 
@@ -1248,14 +1164,7 @@ app.post("/api/students", async (req, res) => {
       }
 
       const data: any = await response.json();
-      let content;
-      if (isGemini) {
-        // Gemini API 响应格式
-        content = data.candidates[0].content.parts[0].text;
-      } else {
-        // OpenAI 风格 API 响应格式
-        content = data.choices[0].message.content;
-      }
+      let content = data.choices[0].message.content;
       content = content.replace(/```json\n?|```/g, '').trim();
       
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -1325,10 +1234,14 @@ app.post("/api/students", async (req, res) => {
         image_url: imageUrl, 
         question_image: questionImage, 
         original_image: originalImage,
-        box: box,
         created_at: time ? new Date(time).toISOString() : new Date().toISOString(),
         status: 'pending'
       };
+      
+      // 只有当 box 有有效值时才添加
+      if (box && typeof box === 'object' && box.x !== undefined) {
+        insertData.box = box;
+      }
       
       // 如果有选项数据，也保存到数据库（如果数据库支持）
       if (options && Array.isArray(options)) {

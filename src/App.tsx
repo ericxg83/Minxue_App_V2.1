@@ -814,8 +814,8 @@ export default function App() {
     
     try {
       // 1. 压缩图片以减少传输体积和 AI 处理时间
-      // 进一步降低图片分辨率和质量，提高传输速度
-      const compressedBase64 = await compressImage(base64Data, 800, 0.7);
+      // 大幅降低图片分辨率和质量，确保在 25 秒内完成识别
+      const compressedBase64 = await compressImage(base64Data, 600, 0.5);
       
       const res = await fetch('/api/analyze-question', {
         method: 'POST',
@@ -834,7 +834,18 @@ export default function App() {
       const data = await res.json();
       
       if (!res.ok) {
-        throw new Error(data.error || "智能识题失败");
+        // 构建更详细的错误信息
+        let errorMessage = data.error || "智能识题失败";
+        if (data.details?.message) {
+          errorMessage = data.details.message;
+        }
+        if (data.details?.suggestions && Array.isArray(data.details.suggestions)) {
+          errorMessage += '\n\n建议：\n' + data.details.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n');
+        }
+        if (data.suggestion) {
+          errorMessage += '\n\n提示：' + data.suggestion;
+        }
+        throw new Error(errorMessage);
       }
       
       // 处理后端返回的数据格式
@@ -944,7 +955,7 @@ export default function App() {
         setTimeout(async () => {
           try {
             // 压缩图片以减少传输体积
-            const compressedBase64 = await compressImage(result, 800, 0.7);
+            const compressedBase64 = await compressImage(result, 600, 0.5);
             
             const res = await fetch('/api/analyze-question', {
               method: 'POST',
@@ -955,7 +966,18 @@ export default function App() {
             if (!res.ok) {
               const errorData = await res.json().catch(() => ({ error: '未知错误' }));
               console.error('识别 API 错误:', errorData);
-              throw new Error(errorData.error || `识别失败 (${res.status})`);
+              // 构建更详细的错误信息
+              let errorMessage = errorData.error || `识别失败 (${res.status})`;
+              if (errorData.details?.message) {
+                errorMessage = errorData.details.message;
+              }
+              if (errorData.details?.suggestions && Array.isArray(errorData.details.suggestions)) {
+                errorMessage += '\n\n建议：\n' + errorData.details.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n');
+              }
+              if (errorData.suggestion) {
+                errorMessage += '\n\n提示：' + errorData.suggestion;
+              }
+              throw new Error(errorMessage);
             }
 
             const data = await res.json();
@@ -966,8 +988,15 @@ export default function App() {
               questionsData = data;
             } else if (data.questions && Array.isArray(data.questions)) {
               questionsData = data.questions;
+            } else if (data.error) {
+              throw new Error(data.error || '识别失败');
             } else {
-              throw new Error('未能识别到题目');
+              throw new Error('未能识别到题目，请尝试重新上传或更换图片');
+            }
+            
+            // 检查是否识别到题目
+            if (questionsData.length === 0) {
+              throw new Error('未能识别到题目，请确保图片中包含清晰的题目内容');
             }
             
             // 自动化分流逻辑
@@ -1119,7 +1148,7 @@ export default function App() {
         setTimeout(async () => {
           try {
             // 压缩图片以减少传输体积
-            const compressedBase64 = await compressImage(result, 800, 0.7);
+            const compressedBase64 = await compressImage(result, 600, 0.5);
             
             const res = await fetch('/api/analyze-question', {
               method: 'POST',
@@ -1130,7 +1159,18 @@ export default function App() {
             if (!res.ok) {
               const errorData = await res.json().catch(() => ({ error: '未知错误' }));
               console.error('识别 API 错误:', errorData);
-              throw new Error(errorData.error || `识别失败 (${res.status})`);
+              // 构建更详细的错误信息
+              let errorMessage = errorData.error || `识别失败 (${res.status})`;
+              if (errorData.details?.message) {
+                errorMessage = errorData.details.message;
+              }
+              if (errorData.details?.suggestions && Array.isArray(errorData.details.suggestions)) {
+                errorMessage += '\n\n建议：\n' + errorData.details.suggestions.map((s: string, i: number) => `${i + 1}. ${s}`).join('\n');
+              }
+              if (errorData.suggestion) {
+                errorMessage += '\n\n提示：' + errorData.suggestion;
+              }
+              throw new Error(errorMessage);
             }
 
             const data = await res.json();
@@ -1890,7 +1930,7 @@ export default function App() {
                               )
                             ) : result.status === 'failed' ? (
                               <div className="text-center py-4">
-                                <p className="text-sm text-red-500">{result.error || '识别失败'}</p>
+                                <p className="text-sm text-red-500 whitespace-pre-line">{result.error || '识别失败'}</p>
                               </div>
                             ) : (
                               <div className="text-center py-4">
@@ -2642,7 +2682,7 @@ export default function App() {
                                 setTimeout(async () => {
                                   try {
                                     // 压缩图片以减少传输体积
-                                    const compressedBase64 = await compressImage(result.image, 800, 0.7);
+                                    const compressedBase64 = await compressImage(result.image, 600, 0.5);
                                     
                                     const res = await fetch('/api/analyze-question', {
                                       method: 'POST',
