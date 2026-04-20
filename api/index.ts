@@ -147,7 +147,7 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 // ModelScope (魔搭) API Configuration
 // 获取 API Key: https://www.modelscope.cn/my/myaccesstoken
-const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "";
+const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || process.env.QWEN_API_KEY || "";
 // 使用 qwen2-vl-7b-instruct - 速度较快且准确
 const modelscopeModelId = process.env.MODELSCOPE_MODEL_ID || "qwen2-vl-7b-instruct";
 const modelscopeEndpoint = process.env.MODELSCOPE_ENDPOINT || "https://api-inference.modelscope.cn/v1/chat/completions";
