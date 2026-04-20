@@ -690,17 +690,26 @@ app.post("/api/students", async (req, res) => {
         })
       });
 
-      const responseData = await testResponse.json();
+      const responseText = await testResponse.text();
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch {
+        responseData = { raw: responseText };
+      }
       
       console.log("响应状态:", testResponse.status);
-      console.log("响应数据:", JSON.stringify(responseData).substring(0, 500));
+      console.log("响应文本:", responseText.substring(0, 1000));
 
       return res.json({
         status: testResponse.status,
         ok: testResponse.ok,
+        statusText: testResponse.statusText,
         apiKeyConfigured: !!dashscopeApiKey,
+        apiKeyPrefix: dashscopeApiKey ? dashscopeApiKey.substring(0, 10) : null,
         endpoint: dashscopeEndpoint,
         model: dashscopeModelId,
+        errorMessage: responseData?.error?.message || null,
         response: responseData
       });
     } catch (error: any) {
@@ -869,12 +878,20 @@ app.post("/api/students", async (req, res) => {
           statusText: response.statusText,
           endpoint: dashscopeEndpoint,
           model: dashscopeModelId,
+          requestBody: {
+            model: dashscopeModelId,
+            max_tokens: 1500,
+            temperature: 0.3,
+            messages_count: 1
+          },
           response: data
         });
         return res.status(response.status).json({
           error: "API 返回错误",
           status: response.status,
-          details: data
+          statusText: response.statusText,
+          details: data,
+          message: data?.error?.message || data?.message || "未知错误"
         });
       }
 
