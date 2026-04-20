@@ -148,8 +148,8 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 // 阿里云百炼 (DashScope) API Configuration
 // 获取 API Key: https://bailian.console.aliyun.com/
 const dashscopeApiKey = process.env.DASHSCOPE_API_KEY || process.env.QWEN_API_KEY || "sk-替换为你的APIKey";
-// 使用 qwen-vl-plus - 速度快且准确
-const dashscopeModelId = "qwen-vl-plus";
+// 使用 qwen-vl-plus-latest - 阿里云百炼支持的模型
+const dashscopeModelId = "qwen-vl-plus-latest";
 const dashscopeEndpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 
 console.log("==============================================");
