@@ -161,6 +161,7 @@ console.log("Model:", siliconFlowModelId);
 console.log("API Key 存在:", !!siliconFlowApiKey);
 console.log("API Key 长度:", siliconFlowApiKey?.length || 0);
 console.log("API Key 前缀:", siliconFlowApiKey ? siliconFlowApiKey.substring(0, 20) + "..." : "未设置");
+console.log("实际使用的 API Key 前10位:", siliconFlowApiKey ? siliconFlowApiKey.substring(0, 10) : "未设置");
 console.log("==============================================");
 
 // 检查环境变量
