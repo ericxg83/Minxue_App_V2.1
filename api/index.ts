@@ -239,12 +239,20 @@ function processOCRData(ocrLines: OCRTextLine[], pageWidth: number = 1000): any[
     const stem = text;
     const options: string[] = [];
     
-    // 提取选项（A.、B.、C.、D. 格式）
-    const optionRegex = /([A-D])\.\s*(.+?)(?=([A-D]\.|$))/g;
+    // 提取选项（支持 A.、A、A．、A) 等多种格式）
+    // 匹配 A/B/C/D 后跟标点符号（英文点、中文点、顿号、右括号等）
+    const optionRegex = /([A-D])[\.．、\)\s]\s*(.+?)(?=([A-D])[\.．、\)\s]|$)/g;
     let optionMatch;
     while ((optionMatch = optionRegex.exec(stem)) !== null) {
       options.push(`${optionMatch[1]}. ${optionMatch[2].trim()}`);
     }
+    
+    // 调试日志：打印选项提取结果
+    console.log(`题目 ${questionNumber} 选项提取:`, {
+      text: stem.substring(0, 100) + '...',
+      optionsCount: options.length,
+      options: options
+    });
     
     // 创建题目对象
     finalQuestions.push({
@@ -257,7 +265,7 @@ function processOCRData(ocrLines: OCRTextLine[], pageWidth: number = 1000): any[
         height: (height / pageWidth) * 100
       },
       text,
-      stem: stem.replace(/([A-D])\.\s*.+?/g, '').trim(),
+      stem: stem.replace(/([A-D])[\.．、\)\s]\s*.+?/g, '').trim(),
       options,
       hasImage: false,
       selected: false,
