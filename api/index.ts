@@ -832,6 +832,9 @@ app.post("/api/students", async (req, res) => {
           
           let fixed = str;
           
+          // 0. 先移除所有非法控制字符（0x00-0x1F 中除 \t, \n, \r 外的字符）
+          fixed = fixed.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+          
           // 1. 针对数学公式中的反斜杠进行转义处理 (在处理引号之前，先处理明显的 LaTeX 错误)
           // 许多 AI 会输出 \sqrt 而不是 \\sqrt
           // 我们寻找所有不是有效 JSON 转义序列的反斜杠并双重转义它们
@@ -840,15 +843,29 @@ app.post("/api/students", async (req, res) => {
           // 2. 处理引号内的换行符 (JSON 不允许字符串内直接换行)
           // 使用更健壮的正则来匹配 JSON 字符串，考虑转义引号
           fixed = fixed.replace(/"((?:[^"\\]|\\.)*)"/g, (match, p1) => {
-            return '"' + p1.replace(/\n/g, '\\n').replace(/\r/g, '\\r') + '"';
+            return '"' + p1.replace(/\n/g, '\\n').replace(/\r/g, '\\r').replace(/\t/g, '\\t') + '"';
           });
 
           // 3. 尝试修复未转义的双引号 (这是一个启发式修复)
           // 匹配 "text": "..." 结构中的内容
-          fixed = fixed.replace(/"text":\s*"([\s\S]*?)"(?=\s*[,\}])/g, (match, p1) => {
+          fixed = fixed.replace(/"text":\s*"([\s\S]*?)"(?=\s*[,
+}])/g, (match, p1) => {
             // 将内部未转义的引号转义，排除掉已经是 \" 的情况
             const escapedText = p1.replace(/(?<!\\)"/g, '\\"');
             return `"text": "${escapedText}"`;
+          });
+          
+          // 3.5 修复其他常见 JSON 字符串字段中的未转义字符
+          fixed = fixed.replace(/"(stem|options|answer|explanation|analysis)":\s*"([\s\S]*?)"(?=\s*[,
+}])/g, (match, field, value) => {
+            // 转义值中的特殊字符
+            const escapedValue = value
+              .replace(/\\/g, '\\\\')  // 先处理已有的反斜杠
+              .replace(/"/g, '\\"')     // 转义双引号
+              .replace(/\n/g, '\\n')     // 转义换行
+              .replace(/\r/g, '\\r')     // 转义回车
+              .replace(/\t/g, '\\t');    // 转义制表符
+            return `"${field}": "${escapedValue}"`;
           });
           
           // 4. 如果 JSON 看起来不完整（例如没有闭合的括号），尝试补齐
