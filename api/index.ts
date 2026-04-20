@@ -663,6 +663,55 @@ app.post("/api/students", async (req, res) => {
     }
   });
 
+  // API: Test DashScope Connection (调试用)
+  app.get("/api/test-dashscope", async (req, res) => {
+    try {
+      console.log("=== 测试 DashScope 连接 ===");
+      console.log("API Key:", dashscopeApiKey ? `${dashscopeApiKey.substring(0, 10)}...` : "未设置");
+      console.log("Endpoint:", dashscopeEndpoint);
+      console.log("Model:", dashscopeModelId);
+
+      const testResponse = await fetch(dashscopeEndpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${dashscopeApiKey}`,
+          "X-DashScope-Api-Key": dashscopeApiKey
+        },
+        body: JSON.stringify({
+          model: dashscopeModelId,
+          max_tokens: 100,
+          messages: [
+            {
+              role: "user",
+              content: "你好，请回复'连接成功'"
+            }
+          ]
+        })
+      });
+
+      const responseData = await testResponse.json();
+      
+      console.log("响应状态:", testResponse.status);
+      console.log("响应数据:", JSON.stringify(responseData).substring(0, 500));
+
+      return res.json({
+        status: testResponse.status,
+        ok: testResponse.ok,
+        apiKeyConfigured: !!dashscopeApiKey,
+        endpoint: dashscopeEndpoint,
+        model: dashscopeModelId,
+        response: responseData
+      });
+    } catch (error: any) {
+      console.error("DashScope 测试失败:", error);
+      return res.status(500).json({
+        error: error.message,
+        details: error.toString()
+      });
+    }
+  });
+
   // API: Analyze Question using QWEN (DashScope)
   app.post("/api/analyze-question", async (req, res) => {
     const controller = new AbortController();
