@@ -147,7 +147,7 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 // ModelScope (魔搭) API Configuration
 // 获取 API Key: https://www.modelscope.cn/my/myaccesstoken
-const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "ms-替换为你的APIKey";
+const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "";
 // 使用 qwen2-vl-7b-instruct - 速度较快且准确
 const modelscopeModelId = process.env.MODELSCOPE_MODEL_ID || "qwen2-vl-7b-instruct";
 const modelscopeEndpoint = process.env.MODELSCOPE_ENDPOINT || "https://api-inference.modelscope.cn/v1/chat/completions";
@@ -669,23 +669,38 @@ app.post("/api/students", async (req, res) => {
       console.log("API Key:", modelscopeApiKey ? `${modelscopeApiKey.substring(0, 10)}...` : "未设置");
       console.log("Endpoint:", modelscopeEndpoint);
       console.log("Model:", modelscopeModelId);
+      
+      // 检查 API Key 是否设置
+      if (!modelscopeApiKey || modelscopeApiKey.length < 10) {
+        return res.status(400).json({
+          error: "API Key 未配置",
+          message: "请在 Vercel 环境变量中设置 MODELSCOPE_API_KEY",
+          details: "获取 API Key: https://www.modelscope.cn/my/myaccesstoken"
+        });
+      }
+
+      const testBody = {
+        model: modelscopeModelId,
+        max_tokens: 100,
+        messages: [
+          {
+            role: "user",
+            content: "Hello, please reply 'Connection successful'"
+          }
+        ]
+      };
+      
+      const testBodyStr = JSON.stringify(testBody);
+      const testBodyBuffer = Buffer.from(testBodyStr, 'utf-8');
 
       const testResponse = await fetch(modelscopeEndpoint, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${modelscopeApiKey}`
+          "Content-Type": "application/json; charset=utf-8",
+          "Authorization": `Bearer ${modelscopeApiKey}`,
+          "Content-Length": testBodyBuffer.length.toString()
         },
-        body: JSON.stringify({
-          model: modelscopeModelId,
-          max_tokens: 100,
-          messages: [
-            {
-              role: "user",
-              content: "你好，请回复'连接成功'"
-            }
-          ]
-        })
+        body: testBodyBuffer
       });
 
       const responseText = await testResponse.text();
@@ -721,6 +736,15 @@ app.post("/api/students", async (req, res) => {
 
   // API: Analyze Question using ModelScope
   app.post("/api/analyze-question", async (req, res) => {
+    // 检查 API Key 是否设置
+    if (!modelscopeApiKey || modelscopeApiKey.length < 10) {
+      return res.status(400).json({
+        error: "API Key 未配置",
+        message: "请在 Vercel 环境变量中设置 MODELSCOPE_API_KEY",
+        details: "获取 API Key: https://www.modelscope.cn/my/myaccesstoken"
+      });
+    }
+    
     const controller = new AbortController();
     // Vercel Hobby 套餐限制 30 秒，设置 28 秒超时以最大化利用时间
     const timeoutId = setTimeout(() => controller.abort("timeout"), 28000);
