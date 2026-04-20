@@ -421,6 +421,14 @@ const mockStudents = [
 
 app.use(express.json({ limit: '50mb' }));
 
+// 静态文件服务 - 用于前端页面
+app.use(express.static('dist'));
+
+// 根路径路由 - 返回前端页面
+app.get('/', (req, res) => {
+  res.sendFile('dist/index.html', { root: '.' });
+});
+
 // API: Get Students
 app.get("/api/students", async (req, res) => {
   console.log("\n=== 📚 GET STUDENTS API CALLED ===");
