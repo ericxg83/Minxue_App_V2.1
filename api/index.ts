@@ -147,7 +147,8 @@ const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
 // ModelScope (魔搭) API Configuration
 // 获取 API Key: https://www.modelscope.cn/my/myaccesstoken
-const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "";
+// TODO: 请在 Vercel 环境变量中配置 MODELSCOPE_API_KEY，然后移除下面的硬编码
+const modelscopeApiKey = process.env.MODELSCOPE_API_KEY || "ms-dae707ae-bcc4-4d7e-aa83-e2165d0cdbf5";
 // 使用魔搭支持的视觉模型 (注意：必须是 ModelScope API 支持的模型)
 // 可用模型：moonshotai/Kimi-K2.5 (视觉多模态)
 const modelscopeModelId = process.env.MODELSCOPE_MODEL_ID || "moonshotai/Kimi-K2.5";
