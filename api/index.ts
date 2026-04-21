@@ -803,9 +803,11 @@ app.post("/api/students", async (req, res) => {
         });
       }
       
-      const prompt = `识别试卷中的所有题目，包括选择题、填空题、解答题等各种题型，返回标准JSON格式：
+      const prompt = `识别试卷中的所有题目和学生作答，返回标准JSON格式：
 
-任务：识别图片中的所有题目，按题号顺序返回。必须识别所有题型，包括：
+任务：识别图片中的所有题目及学生已填写的答案，按题号顺序返回。
+
+必须识别所有题型：
 - 选择题（有A、B、C、D等选项）
 - 填空题（有下划线或空格）
 - 解答题（需要文字说明或计算过程）
@@ -817,14 +819,19 @@ app.post("/api/students", async (req, res) => {
 - text: 完整题目文字（包含题干和选项）
 - stem: 题干部分（不含选项）
 - options: 选项数组，选择题必须有["A.xxx","B.xxx","C.xxx","D.xxx"]格式，非选择题为空数组[]
+- studentAnswer: 学生已填写的答案（字符串）
+  * 选择题：识别学生勾选的选项，如"A"、"B"、"C"或"D"，如未作答则为空字符串""
+  * 填空题：识别学生在空格中填写的内容，如未作答则为空字符串""
+  * 解答题：识别学生写的答案文字，如未作答则为空字符串""
+  * 判断题：识别学生标记的"√"或"×"，如未作答则为空字符串""
 - hasImage: 是否有配图（布尔值）
 - type: 题型，"choice"选择题、"fill"填空题、"subjective"解答题、"judge"判断题
 
 识别要求：
 1. 必须识别图片中所有题目，不能遗漏
 2. 选择题必须提取A、B、C、D四个选项到options数组
-3. 填空题识别下划线或空格位置
-4. 解答题type设为"subjective"，options为空数组
+3. 必须识别学生已填写的答案到studentAnswer字段
+4. 如果学生未作答，studentAnswer设为空字符串""
 5. 所有题目必须包含在questions数组中
 
 JSON格式要求：
@@ -835,7 +842,7 @@ JSON格式要求：
 5. 确保所有括号正确闭合
 
 正确格式示例：
-{"questions":[{"number":"1","box":{"x":10,"y":20,"width":80,"height":15},"text":"1. 2+2=？A. 3 B. 4 C. 5 D. 6","stem":"2+2=？","options":["A. 3","B. 4","C. 5","D. 6"],"hasImage":false,"type":"choice"},{"number":"2","box":{"x":10,"y":40,"width":80,"height":15},"text":"2. 3+___=5","stem":"3+___=5","options":[],"hasImage":false,"type":"fill"}],"subject":"数学"}`;
+{"questions":[{"number":"1","box":{"x":10,"y":20,"width":80,"height":15},"text":"1. 2+2=？A. 3 B. 4 C. 5 D. 6","stem":"2+2=？","options":["A. 3","B. 4","C. 5","D. 6"],"studentAnswer":"B","hasImage":false,"type":"choice"},{"number":"2","box":{"x":10,"y":40,"width":80,"height":15},"text":"2. 3+___=5","stem":"3+___=5","options":[],"studentAnswer":"2","hasImage":false,"type":"fill"}],"subject":"数学"}`;
 
       // 减少重试次数，提高响应速度
       const maxRetries = 1;
