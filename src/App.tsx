@@ -2556,8 +2556,38 @@ export default function App() {
                                     {q.studentAnswer ? (
                                       <div className="mb-3">
                                         <p className="text-sm font-medium text-gray-700 mb-1">学生答案：{q.studentAnswer}</p>
+                                        
+                                        {/* AI 判断结果 */}
+                                        {q.isCorrect !== undefined && (
+                                          <div className="flex items-center gap-2 mt-2">
+                                            <span className="text-xs text-gray-500">AI判断：</span>
+                                            {q.isCorrect === true ? (
+                                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                                                ✓ 正确
+                                                {q.confidence && (
+                                                  <span className="ml-1 text-green-600">({Math.round(q.confidence * 100)}%)</span>
+                                                )}
+                                              </span>
+                                            ) : q.isCorrect === false ? (
+                                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                                                ✗ 错误
+                                                {q.confidence && (
+                                                  <span className="ml-1 text-red-600">({Math.round(q.confidence * 100)}%)</span>
+                                                )}
+                                              </span>
+                                            ) : (
+                                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                                                ? 不确定
+                                                {q.confidence && (
+                                                  <span className="ml-1 text-yellow-600">({Math.round(q.confidence * 100)}%)</span>
+                                                )}
+                                              </span>
+                                            )}
+                                          </div>
+                                        )}
+                                        
                                         {q.studentAnswerImage && (
-                                          <div className="rounded-xl overflow-hidden border border-gray-100">
+                                          <div className="rounded-xl overflow-hidden border border-gray-100 mt-2">
                                             <img 
                                               src={q.studentAnswerImage} 
                                               alt="学生答案截图" 
