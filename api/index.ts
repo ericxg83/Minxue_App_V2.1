@@ -878,7 +878,7 @@ JSON格式要求：
               const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
               const requestBody = {
                 model: modelscopeModelId,
-                max_tokens: 1500,
+                max_tokens: 3000,
                 temperature: 0.3,
                 messages: [
                   {
