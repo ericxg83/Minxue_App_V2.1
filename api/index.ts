@@ -783,8 +783,8 @@ app.post("/api/students", async (req, res) => {
     }
     
     const controller = new AbortController();
-    // Vercel Hobby 套餐限制 30 秒，设置 25 秒超时以留缓冲时间
-    const timeoutId = setTimeout(() => controller.abort("timeout"), 25000);
+    // Render 免费版支持 15 分钟超时，设置 60 秒以等待 AI 处理
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 60000);
 
     try {
       const { base64Image } = req.body;
@@ -868,7 +868,7 @@ app.post("/api/students", async (req, res) => {
               const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
               const requestBody = {
                 model: modelscopeModelId,
-                max_tokens: 2000,
+                max_tokens: 1500,
                 temperature: 0.3,
                 messages: [
                   {
@@ -1232,7 +1232,7 @@ app.post("/api/students", async (req, res) => {
         return res.status(504).json({ 
           error: "识题请求超时", 
           details: { 
-            message: "AI 识别超时（25秒），请稍后重试或尝试以下方法：", 
+            message: "AI 识别超时（60秒），请稍后重试或尝试以下方法：", 
             reason: "timeout",
             suggestions: [
               "压缩图片大小（建议不超过 1MB）",
