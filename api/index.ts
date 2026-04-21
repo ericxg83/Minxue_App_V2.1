@@ -824,11 +824,11 @@ app.post("/api/students", async (req, res) => {
   * 填空题：识别学生在空格中填写的内容，如未作答则为空字符串""
   * 解答题：识别学生写的答案文字，如未作答则为空字符串""
   * 判断题：识别学生标记的"√"或"×"，如未作答则为空字符串""
-- answer: 正确答案（字符串，如果试卷上有标准答案则识别，没有则为空字符串""）
-  * 选择题：标准答案选项，如"A"、"B"、"C"或"D"
-  * 填空题：标准答案内容
-  * 解答题：标准答案或答案要点
-  * 判断题："√"或"×"
+- isCorrect: AI 判断学生答案是否正确（布尔值，true正确/false错误/unknown不确定）
+  * 根据题目内容和常识判断学生答案是否合理
+  * 如果是客观题（选择、填空、判断），根据计算或推理判断对错
+  * 如果不确定或需要人工审核，设为unknown
+- confidence: AI 对判断的置信度（数字0-1，1表示非常确定，0表示完全不确定）
 - hasImage: 是否有配图（布尔值）
 - type: 题型，"choice"选择题、"fill"填空题、"subjective"解答题、"judge"判断题
 
@@ -837,8 +837,16 @@ app.post("/api/students", async (req, res) => {
 2. 选择题必须提取A、B、C、D四个选项到options数组
 3. 必须识别学生已填写的答案到studentAnswer字段
 4. 如果学生未作答，studentAnswer设为空字符串""
-5. 如果试卷上有标准答案（如答案栏、参考答案等），识别到answer字段
-6. 所有题目必须包含在questions数组中
+5. AI必须根据题目内容判断学生答案是否正确，设置isCorrect字段
+6. 设置confidence字段表示AI对判断的置信度（0-1之间）
+7. 所有题目必须包含在questions数组中
+
+判断逻辑：
+- 选择题：根据选项内容推理判断学生选择的答案是否正确
+- 填空题：根据题目计算或常识判断填空内容是否正确
+- 判断题：根据题目陈述判断对错标记是否正确
+- 解答题：根据答案合理性判断，不确定时isCorrect设为unknown
+- 如果学生未作答（studentAnswer为空），isCorrect设为false
 
 JSON格式要求：
 1. 必须返回合法的JSON格式
@@ -848,7 +856,7 @@ JSON格式要求：
 5. 确保所有括号正确闭合
 
 正确格式示例：
-{"questions":[{"number":"1","box":{"x":10,"y":20,"width":80,"height":15},"text":"1. 2+2=？A. 3 B. 4 C. 5 D. 6","stem":"2+2=？","options":["A. 3","B. 4","C. 5","D. 6"],"studentAnswer":"B","answer":"B","hasImage":false,"type":"choice"},{"number":"2","box":{"x":10,"y":40,"width":80,"height":15},"text":"2. 3+___=5","stem":"3+___=5","options":[],"studentAnswer":"2","answer":"2","hasImage":false,"type":"fill"}],"subject":"数学"}`;
+{"questions":[{"number":"1","box":{"x":10,"y":20,"width":80,"height":15},"text":"1. 2+2=？A. 3 B. 4 C. 5 D. 6","stem":"2+2=？","options":["A. 3","B. 4","C. 5","D. 6"],"studentAnswer":"B","isCorrect":true,"confidence":1.0,"hasImage":false,"type":"choice"},{"number":"2","box":{"x":10,"y":40,"width":80,"height":15},"text":"2. 3+___=5","stem":"3+___=5","options":[],"studentAnswer":"3","isCorrect":false,"confidence":0.9,"hasImage":false,"type":"fill"}],"subject":"数学"}`;
 
       // 减少重试次数，提高响应速度
       const maxRetries = 1;
