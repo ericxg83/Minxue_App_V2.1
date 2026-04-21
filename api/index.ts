@@ -791,7 +791,7 @@ app.post("/api/students", async (req, res) => {
       if (!base64Image) return res.status(400).json({ error: "图片不能为空" });
 
       const imageSizeKB = Math.round(base64Image.length * 0.75 / 1024);
-      console.log(`Starting AI Analysis with ModelScope (${modelscopeModelId}). Image size: ~${imageSizeKB}KB.`);
+      console.log(`[${new Date().toISOString()}] Starting AI Analysis with ModelScope (${modelscopeModelId}). Image size: ~${imageSizeKB}KB.`);
       
       // 检查图片大小，超过 2MB 建议压缩
       if (imageSizeKB > 2048) {
@@ -802,6 +802,8 @@ app.post("/api/students", async (req, res) => {
           suggestion: "建议使用较小的图片（不超过 2MB）以获得更好的识别速度"
         });
       }
+      
+      console.log(`[${new Date().toISOString()}] Image validation passed, preparing prompt...`);
       
       const prompt = `识别试卷中的所有题目和学生作答，返回标准JSON格式：
 
@@ -958,6 +960,7 @@ JSON格式要求：
       }
 
       clearTimeout(timeoutId);
+      console.log(`[${new Date().toISOString()}] Received response from ModelScope, status: ${response.status}`);
       
       // 检查 ModelScope API 响应类型
       const contentType = response.headers.get("content-type");
@@ -968,6 +971,7 @@ JSON格式要求：
       }
 
       const data: any = await response.json();
+      console.log(`[${new Date().toISOString()}] Parsed JSON response, choices count: ${data.choices?.length || 0}`);
       if (!response.ok) {
         console.error("API Error Details:", {
           status: response.status,
