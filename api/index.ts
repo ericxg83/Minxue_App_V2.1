@@ -1251,6 +1251,21 @@ JSON格式要求：
           parsedData.questions = questionsWithImages;
         }
         
+        // 打印返回的数据，检查是否包含 isCorrect 和 confidence
+        console.log(`[${new Date().toISOString()}] Returning ${parsedData.questions?.length || 0} questions`);
+        if (parsedData.questions && parsedData.questions.length > 0) {
+          const firstQ = parsedData.questions[0];
+          console.log(`First question fields:`, {
+            number: firstQ.number,
+            hasIsCorrect: 'isCorrect' in firstQ,
+            isCorrect: firstQ.isCorrect,
+            hasConfidence: 'confidence' in firstQ,
+            confidence: firstQ.confidence,
+            hasStudentAnswer: 'studentAnswer' in firstQ,
+            studentAnswer: firstQ.studentAnswer
+          });
+        }
+        
         res.json(parsedData);
       } catch (parseError: any) {
         console.error("All JSON parse attempts failed:", content);
