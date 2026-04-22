@@ -935,13 +935,18 @@ export default function App() {
       // 单文件处理
       const file = files[0];
       const reader = new FileReader();
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const result = event.target?.result as string;
         
+        // 压缩图片以减少传输体积
+        const compressedBase64 = await compressImage(result, 1200, 0.85);
+        
         // 立即加入待确认列表，状态为 processing
+        // 同时保存原始图片和压缩后的图片（AI识别使用的图片）
         const newItem = {
           id: `temp-${Date.now()}`,
-          image: result,
+          image: result,           // 原始图片（高质量）
+          compressedImage: compressedBase64,  // 压缩图片（AI识别使用，用于裁剪）
           filename: file.name,
           status: 'processing' as const,
           questions: []
@@ -954,9 +959,6 @@ export default function App() {
         // 后台异步处理识别
         setTimeout(async () => {
           try {
-            // 压缩图片以减少传输体积
-            const compressedBase64 = await compressImage(result, 400, 0.3);
-            
             const res = await fetch('/api/analyze-question', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1131,11 +1133,16 @@ export default function App() {
       const file = files[i];
       const reader = new FileReader();
       
-      reader.onload = (event) => {
+      reader.onload = async (event) => {
         const result = event.target?.result as string;
+        
+        // 压缩图片（AI识别使用，用于裁剪确保坐标匹配）
+        const compressedBase64 = await compressImage(result, 1200, 0.85);
+        
         const newItem = {
           id: `temp-${Date.now()}-${i}`,
-          image: result,
+          image: result,           // 原始图片（高质量）
+          compressedImage: compressedBase64,  // 压缩图片（AI识别使用，用于裁剪）
           filename: file.name,
           status: 'processing' as const,
           questions: []
@@ -1147,9 +1154,6 @@ export default function App() {
         // 后台异步处理识别
         setTimeout(async () => {
           try {
-            // 压缩图片以减少传输体积
-            const compressedBase64 = await compressImage(result, 400, 0.3);
-            
             const res = await fetch('/api/analyze-question', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -2591,23 +2595,22 @@ export default function App() {
                                     
                                     {/* 操作按钮 */}
                                     <div className="flex items-center justify-between">
-                                      {/* 查看题目裁片按钮 - 直接使用前端 Canvas 裁剪原图 */}
+                                      {/* 查看题目裁片按钮 - 使用压缩后的图片裁剪，确保坐标匹配 */}
                                       <button 
                                         onClick={async (e) => {
                                           e.stopPropagation();
-                                          // 待确认列表：始终使用前端 Canvas 裁剪原图 result.image
-                                          if (q.box && result.image) {
+                                          // 使用压缩后的图片（AI识别时使用的图片）进行裁剪，确保 box 坐标匹配
+                                          const cropImageSource = result.compressedImage || result.image;
+                                          if (q.box && cropImageSource) {
                                             try {
-                                              const cropped = await cropImage(result.image, q.box);
+                                              const cropped = await cropImage(cropImageSource, q.box);
                                               setPreviewImage(cropped);
                                             } catch (err) {
                                               console.error('Crop image error:', err);
-                                              // 降级：显示整张原图
-                                              setPreviewImage(result.image);
+                                              setPreviewImage(cropImageSource);
                                             }
-                                          } else if (result.image) {
-                                            // 如果没有 box，显示整张原图
-                                            setPreviewImage(result.image);
+                                          } else if (cropImageSource) {
+                                            setPreviewImage(cropImageSource);
                                           }
                                         }}
                                         className="w-8 h-8 bg-blue-50 text-blue-300 rounded-xl flex items-center justify-center hover:bg-blue-100 hover:text-blue-600 transition-all active:scale-95 border border-blue-100"
