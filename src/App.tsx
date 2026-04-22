@@ -945,7 +945,7 @@ export default function App() {
           filename: file.name,
           status: 'processing' as const,
           questions: [],
-          studentId: selectedStudent // 关联当前选中的学生
+          studentName: selectedStudent // 关联当前选中的学生名称
         };
         setBatchResults(prev => [...prev, newItem]);
         
@@ -1140,7 +1140,7 @@ export default function App() {
           filename: file.name,
           status: 'processing' as const,
           questions: [],
-          studentId: selectedStudent // 关联当前选中的学生
+          studentName: selectedStudent // 关联当前选中的学生名称
         };
         
         // 添加到待确认列表
@@ -1905,11 +1905,8 @@ export default function App() {
                                           checked={q.selected || false}
                                           onChange={(e) => {
                                             const updatedResults = [...batchResults];
-                                            const originalIndex = updatedResults.findIndex(r => r.id === result.id);
-                                            if (originalIndex !== -1) {
-                                              updatedResults[originalIndex].questions[qIndex].selected = e.target.checked;
-                                              setBatchResults(updatedResults);
-                                            }
+                                            updatedResults[index].questions[qIndex].selected = e.target.checked;
+                                            setBatchResults(updatedResults);
                                           }}
                                         />
                                       </div>
@@ -2439,9 +2436,9 @@ export default function App() {
                 {/* 显示当前学生提示 */}
                 <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2 mb-4">
                   <p className="text-sm text-blue-700 font-medium">
-                    当前学生: <span className="font-bold">{students.find(s => s.id === selectedStudent)?.name || '未选择'}</span>
+                    当前学生: <span className="font-bold">{selectedStudent || '未选择'}</span>
                     <span className="text-xs text-blue-500 ml-2">
-                      (共 {batchResults.filter(r => !r.studentId || r.studentId === selectedStudent).length} 个待确认)
+                      (共 {batchResults.filter(r => !r.studentName || r.studentName === selectedStudent).length} 个待确认)
                     </span>
                   </p>
                 </div>
@@ -2450,16 +2447,15 @@ export default function App() {
                 {(() => {
                   // 调试日志
                   console.log('=== 待确认列表过滤调试 ===');
-                  console.log('当前选中学生ID:', selectedStudent);
-                  console.log('当前选中学生姓名:', students.find(s => s.id === selectedStudent)?.name);
+                  console.log('当前选中学生:', selectedStudent);
                   console.log('batchResults 总数:', batchResults.length);
-                  console.log('batchResults 详情:', batchResults.map(r => ({ id: r.id, filename: r.filename, studentId: r.studentId })));
+                  console.log('batchResults 详情:', batchResults.map(r => ({ id: r.id, filename: r.filename, studentName: r.studentName })));
                   
                   const filteredResults = batchResults.filter(result => {
-                    // 如果没有 studentId，说明是旧数据，默认显示
-                    // 如果有 studentId，只显示当前选中的学生
-                    const shouldShow = !result.studentId || result.studentId === selectedStudent;
-                    console.log(`过滤: ${result.filename}, studentId=${result.studentId}, 当前学生=${selectedStudent}, 显示=${shouldShow}`);
+                    // 如果没有 studentName，说明是旧数据，默认显示
+                    // 如果有 studentName，只显示当前选中的学生
+                    const shouldShow = !result.studentName || result.studentName === selectedStudent;
+                    console.log(`过滤: ${result.filename}, studentName=${result.studentName}, 当前学生=${selectedStudent}, 显示=${shouldShow}`);
                     return shouldShow;
                   });
                   
@@ -2654,11 +2650,8 @@ export default function App() {
                                           onClick={() => {
                                             // 从待确认列表中排除该题目
                                             const updatedResults = [...batchResults];
-                                            const originalIndex = updatedResults.findIndex(r => r.id === result.id);
-                                            if (originalIndex !== -1) {
-                                              updatedResults[originalIndex].questions = updatedResults[originalIndex].questions.filter((item: any) => item !== q);
-                                              setBatchResults(updatedResults);
-                                            }
+                                            updatedResults[index].questions = updatedResults[index].questions.filter((item: any) => item !== q);
+                                            setBatchResults(updatedResults);
                                           }}
                                           className="px-4 py-2 text-xs font-bold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                                         >
@@ -2671,7 +2664,17 @@ export default function App() {
                                             try {
                                               // 裁剪图片
                                               const imageUrl = q.image || batchResults.find(r => r.questions.includes(q))?.image;
-                                              const croppedImage = imageUrl ? await cropImage(imageUrl, q.box) : '';
+                                              let croppedImage = '';
+                                              if (imageUrl && q.box) {
+                                                try {
+                                                  croppedImage = await cropImage(imageUrl, q.box);
+                                                } catch (cropErr) {
+                                                  console.warn('图片裁剪失败，使用原图:', cropErr);
+                                                  croppedImage = imageUrl;
+                                                }
+                                              } else if (imageUrl) {
+                                                croppedImage = imageUrl;
+                                              }
 
                                               const res = await fetch('/api/submit', {
                                                 method: 'POST',
@@ -2691,7 +2694,9 @@ export default function App() {
                                               });
                                               
                                               if (!res.ok) {
-                                                throw new Error('保存失败');
+                                                const errorData = await res.json().catch(() => ({ error: '未知错误' }));
+                                                console.error('提交失败详情:', errorData);
+                                                throw new Error(errorData.error || `保存失败 (${res.status})`);
                                               }
                                               
                                               const data = await res.json();
@@ -2699,11 +2704,8 @@ export default function App() {
                                               
                                               // 从待确认列表中移除该题目
                                               const updatedResults = [...batchResults];
-                                              const originalIndex = updatedResults.findIndex(r => r.id === result.id);
-                                              if (originalIndex !== -1) {
-                                                updatedResults[originalIndex].questions = updatedResults[originalIndex].questions.filter((item: any) => item !== q);
-                                                setBatchResults(updatedResults);
-                                              }
+                                              updatedResults[index].questions = updatedResults[index].questions.filter((item: any) => item !== q);
+                                              setBatchResults(updatedResults);
                                               
                                               // 刷新错题列表
                                               await fetchHistory();
