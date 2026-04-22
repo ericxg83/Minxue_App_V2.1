@@ -2602,14 +2602,17 @@ export default function App() {
                                           // 优先使用后端 Sharp 裁剪的题目图片（最准确）
                                           if (q.questionImage) {
                                             setPreviewImage(q.questionImage);
-                                          } else if (q.box && result.image) {
-                                            // 降级方案：前端 Canvas 裁剪
-                                            try {
-                                              const cropped = await cropImage(result.image, q.box);
-                                              setPreviewImage(cropped);
-                                            } catch (err) {
-                                              console.error('Crop image error:', err);
-                                              setPreviewImage(result.image);
+                                          } else if (q.box) {
+                                            // 降级方案：使用后端返回的 processedImage（与 AI 分析的图片尺寸一致）进行裁剪
+                                            const cropSource = result.processedImage || result.image;
+                                            if (cropSource) {
+                                              try {
+                                                const cropped = await cropImage(cropSource, q.box);
+                                                setPreviewImage(cropped);
+                                              } catch (err) {
+                                                console.error('Crop image error:', err);
+                                                setPreviewImage(cropSource);
+                                              }
                                             }
                                           }
                                         }}
