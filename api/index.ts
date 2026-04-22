@@ -819,6 +819,9 @@ app.post("/api/students", async (req, res) => {
 示例：
 {"questions":[{"number":"1","box":{"x":10,"y":20,"width":80,"height":15},"text":"1. 2+2=? A.3 B.4 C.5 D.6","stem":"2+2=?","options":["A.3","B.4","C.5","D.6"],"studentAnswer":"B","isCorrect":true,"confidence":1.0,"hasImage":false,"type":"choice"}],"subject":"数学"}`;
 
+      // 全局变量：存储处理后的图片（供裁剪使用）
+      let processedBase64: string | null = null;
+
       // 减少重试次数，提高响应速度
       const maxRetries = 1;
       let attempt = 0;
@@ -857,7 +860,7 @@ app.post("/api/students", async (req, res) => {
               console.log("清理后 base64 长度:", cleanBase64.length);
 
               // 始终使用 Sharp 调整图片尺寸，确保后端、ModelScope 和裁剪使用完全相同的图片
-              let processedBase64 = cleanBase64;
+              processedBase64 = cleanBase64;
               try {
                 const imageBuffer = Buffer.from(cleanBase64, 'base64');
                 const metadata = await sharp(imageBuffer).metadata();
@@ -865,7 +868,7 @@ app.post("/api/students", async (req, res) => {
                 const origHeight = metadata.height || 0;
                 console.log(`原始图片尺寸: ${origWidth}x${origHeight}`);
                 
-                // 统一调整为 1024px 最大边，确保与前端发送的图片尺寸接近
+                // 统一调整为 1024px 最大边
                 const resizedBuffer = await sharp(imageBuffer)
                   .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
                   .jpeg({ quality: 90 })
@@ -1222,6 +1225,11 @@ app.post("/api/students", async (req, res) => {
                 }
                 
                 // 使用处理后的图片进行裁剪（processedBase64），确保与 AI 看到的图片尺寸一致
+                if (!processedBase64) {
+                  console.error("processedBase64 is null, cannot crop image");
+                  questionsWithImages.push(q);
+                  continue;
+                }
                 const questionImage = await cropImage(`data:image/jpeg;base64,${processedBase64}`, adjustedBox);
                 questionsWithImages.push({ ...q, questionImage });
               } else {

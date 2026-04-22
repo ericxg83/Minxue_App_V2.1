@@ -2595,19 +2595,21 @@ export default function App() {
                                     
                                     {/* 操作按钮 */}
                                     <div className="flex items-center justify-between">
-                                      {/* 查看题目裁片按钮 - 使用后端处理后的图片裁剪，确保与 AI 坐标一致 */}
+                                      {/* 查看题目裁片按钮 - 优先使用后端 Sharp 裁剪的 questionImage */}
                                       <button 
                                         onClick={async (e) => {
                                           e.stopPropagation();
-                                          // 使用后端返回的 processedImage（与 AI 分析的图片尺寸一致）进行裁剪
-                                          const cropSource = result.processedImage || result.image;
-                                          if (q.box && cropSource) {
+                                          // 优先使用后端 Sharp 裁剪的题目图片（最准确）
+                                          if (q.questionImage) {
+                                            setPreviewImage(q.questionImage);
+                                          } else if (q.box && result.image) {
+                                            // 降级方案：前端 Canvas 裁剪
                                             try {
-                                              const cropped = await cropImage(cropSource, q.box);
+                                              const cropped = await cropImage(result.image, q.box);
                                               setPreviewImage(cropped);
                                             } catch (err) {
                                               console.error('Crop image error:', err);
-                                              setPreviewImage(cropSource);
+                                              setPreviewImage(result.image);
                                             }
                                           }
                                         }}
