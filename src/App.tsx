@@ -2595,25 +2595,14 @@ export default function App() {
                                     
                                     {/* 操作按钮 */}
                                     <div className="flex items-center justify-between">
-                                      {/* 查看题目裁片按钮 - 优先使用后端 Sharp 裁剪的 questionImage */}
+                                      {/* 查看题目裁片按钮 - 与错题列表逻辑完全一致 */}
                                       <button 
-                                        onClick={async (e) => {
+                                        onClick={(e) => {
                                           e.stopPropagation();
-                                          // 优先使用后端 Sharp 裁剪的题目图片（最准确）
-                                          if (q.questionImage) {
-                                            setPreviewImage(q.questionImage);
-                                          } else if (q.box) {
-                                            // 降级方案：使用后端返回的 processedImage（与 AI 分析的图片尺寸一致）进行裁剪
-                                            const cropSource = result.processedImage || result.image;
-                                            if (cropSource) {
-                                              try {
-                                                const cropped = await cropImage(cropSource, q.box);
-                                                setPreviewImage(cropped);
-                                              } catch (err) {
-                                                console.error('Crop image error:', err);
-                                                setPreviewImage(cropSource);
-                                              }
-                                            }
+                                          // 显示题目裁剪块，如果没有则显示原图
+                                          const imageToShow = q.questionImage || q.imageUrl || '';
+                                          if (imageToShow) {
+                                            setPreviewImage(imageToShow);
                                           }
                                         }}
                                         className="w-8 h-8 bg-blue-50 text-blue-300 rounded-xl flex items-center justify-center hover:bg-blue-100 hover:text-blue-600 transition-all active:scale-95 border border-blue-100"
