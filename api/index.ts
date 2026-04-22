@@ -783,8 +783,8 @@ app.post("/api/students", async (req, res) => {
     }
     
     const controller = new AbortController();
-    // Render 免费版支持 15 分钟超时，设置 60 秒以等待 AI 处理
-    const timeoutId = setTimeout(() => controller.abort("timeout"), 60000);
+    // Render 免费版支持 15 分钟超时，设置 120 秒以等待 AI 处理
+    const timeoutId = setTimeout(() => controller.abort("timeout"), 120000);
 
     try {
       const { base64Image } = req.body;
