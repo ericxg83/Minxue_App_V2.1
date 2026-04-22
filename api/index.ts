@@ -115,11 +115,11 @@ async function cropImage(base64Image: string, box: { x: number; y: number; width
     const cropWidth = Math.round((box.width / 100) * width);
     const cropHeight = Math.round((box.height / 100) * height);
     
-    // 确保坐标有效（防止超出图片边界）
-    const validX = Math.max(0, Math.min(x, width - 1));
-    const validY = Math.max(0, Math.min(y, height - 1));
-    const validWidth = Math.max(1, Math.min(cropWidth, width - validX));
-    const validHeight = Math.max(1, Math.min(cropHeight, height - validY));
+    // 确保坐标有效
+    const validX = Math.max(0, x);
+    const validY = Math.max(0, y);
+    const validWidth = Math.min(cropWidth, width - validX);
+    const validHeight = Math.min(cropHeight, height - validY);
     
     // 裁剪图片
     const croppedBuffer = await sharp(buffer)
@@ -805,22 +805,60 @@ app.post("/api/students", async (req, res) => {
       
       console.log(`[${new Date().toISOString()}] Image validation passed, preparing prompt...`);
       
-      const prompt = `识别图片中的所有题目及学生答案，返回JSON。
+      const prompt = `识别试卷中的所有题目和学生作答，返回标准JSON格式：
 
-字段：number题号，box{x,y,width,height}位置(0-100百分比)，text完整文字，stem题干，options选项数组，studentAnswer学生答案，isCorrect(AI判断对错:true/false/unknown)，confidence(0-1)，type(choice/fill/subjective/judge)。
+任务：识别图片中的所有题目及学生已填写的答案，按题号顺序返回。
 
-要求：
-1. 识别所有题目和答案
-2. 选择题提取ABCD选项到options
-3. 未作答则studentAnswer=""，isCorrect=false
-4. AI判断对错，设置isCorrect和confidence
-5. 只返回纯JSON，无markdown
+必须识别所有题型：
+- 选择题（有A、B、C、D等选项）
+- 填空题（有下划线或空格）
+- 解答题（需要文字说明或计算过程）
+- 判断题（有√或×）
 
-示例：
-{"questions":[{"number":"1","box":{"x":10,"y":20,"width":80,"height":15},"text":"1. 2+2=? A.3 B.4 C.5 D.6","stem":"2+2=?","options":["A.3","B.4","C.5","D.6"],"studentAnswer":"B","isCorrect":true,"confidence":1.0,"hasImage":false,"type":"choice"}],"subject":"数学"}`;
+字段说明：
+- number: 题号（字符串，如"1"、"2"）
+- box: {x, y, width, height} 题目在图片中的位置，使用0-100的百分比坐标
+- text: 完整题目文字（包含题干和选项）
+- stem: 题干部分（不含选项）
+- options: 选项数组，选择题必须有["A.xxx","B.xxx","C.xxx","D.xxx"]格式，非选择题为空数组[]
+- studentAnswer: 学生已填写的答案（字符串）
+  * 选择题：识别学生勾选的选项，如"A"、"B"、"C"或"D"，如未作答则为空字符串""
+  * 填空题：识别学生在空格中填写的内容，如未作答则为空字符串""
+  * 解答题：识别学生写的答案文字，如未作答则为空字符串""
+  * 判断题：识别学生标记的"√"或"×"，如未作答则为空字符串""
+- isCorrect: AI 判断学生答案是否正确（布尔值，true正确/false错误/unknown不确定）
+  * 根据题目内容和常识判断学生答案是否合理
+  * 如果是客观题（选择、填空、判断），根据计算或推理判断对错
+  * 如果不确定或需要人工审核，设为unknown
+- confidence: AI 对判断的置信度（数字0-1，1表示非常确定，0表示完全不确定）
+- hasImage: 是否有配图（布尔值）
+- type: 题型，"choice"选择题、"fill"填空题、"subjective"解答题、"judge"判断题
 
-      // 全局变量：存储处理后的图片（供裁剪使用）
-      let processedBase64: string | null = null;
+识别要求：
+1. 必须识别图片中所有题目，不能遗漏
+2. 选择题必须提取A、B、C、D四个选项到options数组
+3. 必须识别学生已填写的答案到studentAnswer字段
+4. 如果学生未作答，studentAnswer设为空字符串""
+5. AI必须根据题目内容判断学生答案是否正确，设置isCorrect字段
+6. 设置confidence字段表示AI对判断的置信度（0-1之间）
+7. 所有题目必须包含在questions数组中
+
+判断逻辑：
+- 选择题：根据选项内容推理判断学生选择的答案是否正确
+- 填空题：根据题目计算或常识判断填空内容是否正确
+- 判断题：根据题目陈述判断对错标记是否正确
+- 解答题：根据答案合理性判断，不确定时isCorrect设为unknown
+- 如果学生未作答（studentAnswer为空），isCorrect设为false
+
+JSON格式要求：
+1. 必须返回合法的JSON格式
+2. 字符串必须用双引号包裹
+3. 数组元素之间必须用逗号分隔
+4. 不要返回markdown代码块，只返回纯JSON
+5. 确保所有括号正确闭合
+
+正确格式示例：
+{"questions":[{"number":"1","box":{"x":10,"y":20,"width":80,"height":15},"text":"1. 2+2=？A. 3 B. 4 C. 5 D. 6","stem":"2+2=？","options":["A. 3","B. 4","C. 5","D. 6"],"studentAnswer":"B","isCorrect":true,"confidence":1.0,"hasImage":false,"type":"choice"},{"number":"2","box":{"x":10,"y":40,"width":80,"height":15},"text":"2. 3+___=5","stem":"3+___=5","options":[],"studentAnswer":"3","isCorrect":false,"confidence":0.9,"hasImage":false,"type":"fill"}],"subject":"数学"}`;
 
       // 减少重试次数，提高响应速度
       const maxRetries = 1;
@@ -859,19 +897,8 @@ app.post("/api/students", async (req, res) => {
 
               console.log("清理后 base64 长度:", cleanBase64.length);
 
-              // 使用前端传来的图片（已经压缩到 1024px），不再重复调整
-              // 这样可以确保后端、ModelScope 和裁剪使用完全相同的图片
-              processedBase64 = cleanBase64;
-              try {
-                const imageBuffer = Buffer.from(cleanBase64, 'base64');
-                const metadata = await sharp(imageBuffer).metadata();
-                console.log(`使用前端传来的图片尺寸: ${metadata.width}x${metadata.height}`);
-              } catch (metadataError) {
-                console.warn("获取图片元数据失败:", metadataError);
-              }
-
-              // 构建请求体 - ModelScope 需要 data URL 格式（使用处理后的图片）
-              const imageUrl = `data:image/jpeg;base64,${processedBase64}`;
+              // 构建请求体 - ModelScope 需要 data URL 格式
+              const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
               const requestBody = {
                 model: modelscopeModelId,
                 max_tokens: 3000,
@@ -969,7 +996,7 @@ app.post("/api/students", async (req, res) => {
       }
 
       // 检查 API 响应格式是否有效
-      if (!data.choices || data.choices === null || !Array.isArray(data.choices) || data.choices.length === 0) {
+      if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
         console.error("Invalid API Response Format:", {
           endpoint: modelscopeEndpoint,
           model: modelscopeModelId,
@@ -977,7 +1004,7 @@ app.post("/api/students", async (req, res) => {
         });
         return res.status(500).json({
           error: "AI API 返回格式异常",
-          details: "API 响应中缺少 choices 字段或格式不正确 (choices is null/empty)",
+          details: "API 响应中缺少 choices 字段或格式不正确",
           response: data
         });
       }
@@ -1171,20 +1198,8 @@ app.post("/api/students", async (req, res) => {
       try {
         const parsedData = tryParse(content);
         
-        // 返回处理后的图片（与 AI 分析使用的图片尺寸一致），供前端裁剪使用
-        if (processedBase64 && parsedData) {
-          parsedData.processedImage = `data:image/jpeg;base64,${processedBase64}`;
-          console.log(`Set processedImage, length: ${parsedData.processedImage.length}`);
-        } else {
-          console.warn("processedBase64 or parsedData is null/undefined, cannot set processedImage", {
-            hasProcessedBase64: !!processedBase64,
-            hasParsedData: !!parsedData
-          });
-        }
-        
-        // 为每个题目生成裁剪后的图片（使用处理后的图片，确保 box 坐标与裁剪图片尺寸一致）
+        // 为每个题目生成裁剪后的图片
         if (parsedData.questions && Array.isArray(parsedData.questions)) {
-          console.log(`Processing ${parsedData.questions.length} questions for cropping...`);
           // 串行处理题目，以便实现智能截断逻辑
           const questionsWithImages = [];
           for (let i = 0; i < parsedData.questions.length; i++) {
@@ -1221,24 +1236,8 @@ app.post("/api/students", async (req, res) => {
                   }
                 }
                 
-                // 使用处理后的图片进行裁剪（processedBase64），确保与 AI 看到的图片尺寸一致
-                if (!processedBase64) {
-                  console.error("processedBase64 is null, cannot crop image");
-                  questionsWithImages.push(q);
-                  continue;
-                }
-                
-                console.log(`Cropping question ${q.number} with box:`, adjustedBox);
-                console.log(`processedBase64 length: ${processedBase64.length}`);
-                
-                try {
-                  const questionImage = await cropImage(`data:image/jpeg;base64,${processedBase64}`, adjustedBox);
-                  console.log(`Cropped image length: ${questionImage.length}`);
-                  questionsWithImages.push({ ...q, questionImage });
-                } catch (cropError) {
-                  console.error(`Failed to crop question ${q.number}:`, cropError);
-                  questionsWithImages.push(q);
-                }
+                const questionImage = await cropImage(base64Image, adjustedBox);
+                questionsWithImages.push({ ...q, questionImage });
               } else {
                 questionsWithImages.push(q);
               }
