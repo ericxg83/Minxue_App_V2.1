@@ -115,11 +115,11 @@ async function cropImage(base64Image: string, box: { x: number; y: number; width
     const cropWidth = Math.round((box.width / 100) * width);
     const cropHeight = Math.round((box.height / 100) * height);
     
-    // 确保坐标有效
-    const validX = Math.max(0, x);
-    const validY = Math.max(0, y);
-    const validWidth = Math.min(cropWidth, width - validX);
-    const validHeight = Math.min(cropHeight, height - validY);
+    // 确保坐标有效（防止超出图片边界）
+    const validX = Math.max(0, Math.min(x, width - 1));
+    const validY = Math.max(0, Math.min(y, height - 1));
+    const validWidth = Math.max(1, Math.min(cropWidth, width - validX));
+    const validHeight = Math.max(1, Math.min(cropHeight, height - validY));
     
     // 裁剪图片
     const croppedBuffer = await sharp(buffer)
@@ -859,25 +859,15 @@ app.post("/api/students", async (req, res) => {
 
               console.log("清理后 base64 长度:", cleanBase64.length);
 
-              // 始终使用 Sharp 调整图片尺寸，确保后端、ModelScope 和裁剪使用完全相同的图片
+              // 使用前端传来的图片（已经压缩到 1024px），不再重复调整
+              // 这样可以确保后端、ModelScope 和裁剪使用完全相同的图片
               processedBase64 = cleanBase64;
               try {
                 const imageBuffer = Buffer.from(cleanBase64, 'base64');
                 const metadata = await sharp(imageBuffer).metadata();
-                const origWidth = metadata.width || 0;
-                const origHeight = metadata.height || 0;
-                console.log(`原始图片尺寸: ${origWidth}x${origHeight}`);
-                
-                // 统一调整为 1024px 最大边
-                const resizedBuffer = await sharp(imageBuffer)
-                  .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
-                  .jpeg({ quality: 90 })
-                  .toBuffer();
-                processedBase64 = resizedBuffer.toString('base64');
-                const newMetadata = await sharp(resizedBuffer).metadata();
-                console.log(`统一调整后图片尺寸: ${newMetadata.width}x${newMetadata.height}`);
-              } catch (resizeError) {
-                console.warn("图片调整失败，使用原始图片:", resizeError);
+                console.log(`使用前端传来的图片尺寸: ${metadata.width}x${metadata.height}`);
+              } catch (metadataError) {
+                console.warn("获取图片元数据失败:", metadataError);
               }
 
               // 构建请求体 - ModelScope 需要 data URL 格式（使用处理后的图片）
