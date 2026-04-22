@@ -945,7 +945,7 @@ export default function App() {
           filename: file.name,
           status: 'processing' as const,
           questions: [],
-          studentName: selectedStudent // 关联当前选中的学生名称
+          studentId: selectedStudent // 关联当前选中的学生
         };
         setBatchResults(prev => [...prev, newItem]);
         
@@ -1140,7 +1140,7 @@ export default function App() {
           filename: file.name,
           status: 'processing' as const,
           questions: [],
-          studentName: selectedStudent // 关联当前选中的学生名称
+          studentId: selectedStudent // 关联当前选中的学生
         };
         
         // 添加到待确认列表
@@ -2436,9 +2436,9 @@ export default function App() {
                 {/* 显示当前学生提示 */}
                 <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-2 mb-4">
                   <p className="text-sm text-blue-700 font-medium">
-                    当前学生: <span className="font-bold">{selectedStudent || '未选择'}</span>
+                    当前学生: <span className="font-bold">{students.find(s => s.id === selectedStudent)?.name || '未选择'}</span>
                     <span className="text-xs text-blue-500 ml-2">
-                      (共 {batchResults.filter(r => !r.studentName || r.studentName === selectedStudent).length} 个待确认)
+                      (共 {batchResults.filter(r => !r.studentId || r.studentId === selectedStudent).length} 个待确认)
                     </span>
                   </p>
                 </div>
@@ -2447,15 +2447,16 @@ export default function App() {
                 {(() => {
                   // 调试日志
                   console.log('=== 待确认列表过滤调试 ===');
-                  console.log('当前选中学生:', selectedStudent);
+                  console.log('当前选中学生ID:', selectedStudent);
+                  console.log('当前选中学生姓名:', students.find(s => s.id === selectedStudent)?.name);
                   console.log('batchResults 总数:', batchResults.length);
-                  console.log('batchResults 详情:', batchResults.map(r => ({ id: r.id, filename: r.filename, studentName: r.studentName })));
+                  console.log('batchResults 详情:', batchResults.map(r => ({ id: r.id, filename: r.filename, studentId: r.studentId })));
                   
                   const filteredResults = batchResults.filter(result => {
-                    // 如果没有 studentName，说明是旧数据，默认显示
-                    // 如果有 studentName，只显示当前选中的学生
-                    const shouldShow = !result.studentName || result.studentName === selectedStudent;
-                    console.log(`过滤: ${result.filename}, studentName=${result.studentName}, 当前学生=${selectedStudent}, 显示=${shouldShow}`);
+                    // 如果没有 studentId，说明是旧数据，默认显示
+                    // 如果有 studentId，只显示当前选中的学生
+                    const shouldShow = !result.studentId || result.studentId === selectedStudent;
+                    console.log(`过滤: ${result.filename}, studentId=${result.studentId}, 当前学生=${selectedStudent}, 显示=${shouldShow}`);
                     return shouldShow;
                   });
                   
