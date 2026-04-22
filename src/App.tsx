@@ -2591,23 +2591,22 @@ export default function App() {
                                     
                                     {/* 操作按钮 */}
                                     <div className="flex items-center justify-between">
-                                      {/* 查看题目裁片按钮 - 和错题列表逻辑一致 */}
+                                      {/* 查看题目裁片按钮 - 直接使用前端 Canvas 裁剪原图 */}
                                       <button 
                                         onClick={async (e) => {
                                           e.stopPropagation();
-                                          // 优先使用服务端裁剪的 questionImage
-                                          const imageToShow = q.questionImage || q.imageUrl || '';
-                                          if (imageToShow) {
-                                            setPreviewImage(imageToShow);
-                                          } else if (q.box && result.image) {
-                                            // 如果服务端裁剪失败，前端 Canvas 动态裁剪
+                                          // 待确认列表：始终使用前端 Canvas 裁剪原图 result.image
+                                          if (q.box && result.image) {
                                             try {
                                               const cropped = await cropImage(result.image, q.box);
                                               setPreviewImage(cropped);
                                             } catch (err) {
+                                              console.error('Crop image error:', err);
+                                              // 降级：显示整张原图
                                               setPreviewImage(result.image);
                                             }
-                                          } else {
+                                          } else if (result.image) {
+                                            // 如果没有 box，显示整张原图
                                             setPreviewImage(result.image);
                                           }
                                         }}
