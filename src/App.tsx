@@ -2591,13 +2591,30 @@ export default function App() {
                                     
                                     {/* 操作按钮 */}
                                     <div className="flex items-center justify-between">
-                                      {/* 查看题目裁片按钮 */}
+                                      {/* 查看题目裁片按钮 - 和错题列表逻辑一致 */}
                                       <button 
-                                        onClick={() => setPreviewImage(q.questionImage || q.imageUrl || result.image)}
-                                        className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors"
-                                        title="查看题目裁片"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          // 优先使用服务端裁剪的 questionImage
+                                          const imageToShow = q.questionImage || q.imageUrl || '';
+                                          if (imageToShow) {
+                                            setPreviewImage(imageToShow);
+                                          } else if (q.box && result.image) {
+                                            // 如果服务端裁剪失败，前端 Canvas 动态裁剪
+                                            try {
+                                              const cropped = await cropImage(result.image, q.box);
+                                              setPreviewImage(cropped);
+                                            } catch (err) {
+                                              setPreviewImage(result.image);
+                                            }
+                                          } else {
+                                            setPreviewImage(result.image);
+                                          }
+                                        }}
+                                        className="w-8 h-8 bg-blue-50 text-blue-300 rounded-xl flex items-center justify-center hover:bg-blue-100 hover:text-blue-600 transition-all active:scale-95 border border-blue-100"
+                                        title="查看题目裁剪块"
                                       >
-                                        <Eye className="w-4 h-4 text-blue-600" />
+                                        <Eye className="w-4 h-4" />
                                       </button>
                                       
                                       <div className="flex gap-2">
