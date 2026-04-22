@@ -2475,11 +2475,11 @@ export default function App() {
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            // 显示题目裁剪块，如果没有则显示原图
-                                            setPreviewImage(q.imageUrl || result.image);
+                                            // 显示题目裁片（优先使用 questionImage，如果没有则使用 imageUrl）
+                                            setPreviewImage(q.questionImage || q.imageUrl || result.image);
                                           }}
                                           className="w-8 h-8 bg-blue-50 text-blue-300 rounded-xl flex items-center justify-center hover:bg-blue-100 hover:text-blue-600 transition-all active:scale-95 border border-blue-100"
-                                          title="查看题目裁剪块"
+                                          title="查看题目裁片"
                                         >
                                           <Eye className="w-4 h-4" />
                                         </button>
@@ -2601,16 +2601,7 @@ export default function App() {
                                     )}
                                     
                                     {/* 操作按钮 */}
-                                    <div className="flex items-center justify-between">
-                                      {/* 查看原卷按钮 */}
-                                      <button 
-                                        onClick={() => setPreviewImage(result.image)}
-                                        className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors"
-                                        title="查看原卷"
-                                      >
-                                        <Eye className="w-4 h-4 text-blue-600" />
-                                      </button>
-                                      
+                                    <div className="flex items-center justify-end">
                                       <div className="flex gap-2">
                                         {/* 排除按钮 */}
                                         <button 
