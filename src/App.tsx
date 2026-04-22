@@ -935,21 +935,17 @@ export default function App() {
       // 单文件处理
       const file = files[0];
       const reader = new FileReader();
-      reader.onload = async (event) => {
+      reader.onload = (event) => {
         const result = event.target?.result as string;
         
-        // 压缩图片以减少传输体积（确保不超过 ModelScope API 的 2048x2048 限制）
-        const compressedBase64 = await compressImage(result, 1024, 0.85);
-        
-        // 立即加入待确认列表，状态为 processing
-        // 同时保存原始图片和压缩后的图片（AI识别使用的图片）
+        // 立即加入待确认列表，状态为 processing，关联当前学生
         const newItem = {
           id: `temp-${Date.now()}`,
-          image: result,           // 原始图片（高质量）
-          compressedImage: compressedBase64,  // 压缩图片（AI识别使用，用于裁剪）
+          image: result,
           filename: file.name,
           status: 'processing' as const,
-          questions: []
+          questions: [],
+          studentId: selectedStudent // 关联当前选中的学生
         };
         setBatchResults(prev => [...prev, newItem]);
         
@@ -959,6 +955,9 @@ export default function App() {
         // 后台异步处理识别
         setTimeout(async () => {
           try {
+            // 压缩图片以减少传输体积
+            const compressedBase64 = await compressImage(result, 400, 0.3);
+            
             const res = await fetch('/api/analyze-question', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1133,16 +1132,11 @@ export default function App() {
       const file = files[i];
       const reader = new FileReader();
       
-      reader.onload = async (event) => {
+      reader.onload = (event) => {
         const result = event.target?.result as string;
-        
-        // 压缩图片（AI识别使用，用于裁剪确保坐标匹配，确保不超过 2048x2048 限制）
-        const compressedBase64 = await compressImage(result, 1024, 0.85);
-        
         const newItem = {
           id: `temp-${Date.now()}-${i}`,
-          image: result,           // 原始图片（高质量）
-          compressedImage: compressedBase64,  // 压缩图片（AI识别使用，用于裁剪）
+          image: result,
           filename: file.name,
           status: 'processing' as const,
           questions: []
@@ -1154,6 +1148,9 @@ export default function App() {
         // 后台异步处理识别
         setTimeout(async () => {
           try {
+            // 压缩图片以减少传输体积
+            const compressedBase64 = await compressImage(result, 400, 0.3);
+            
             const res = await fetch('/api/analyze-question', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -2435,18 +2432,27 @@ export default function App() {
             </div>
             ) : (
               <div className="flex-1 overflow-y-auto p-4 space-y-4 no-scrollbar">
-                {batchResults.length === 0 ? (
-                  <div className="flex-1 flex flex-col items-center justify-center h-80 text-center">
-                    <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 border border-blue-100">
-                      <Camera className="w-10 h-10 text-blue-200" />
-                    </div>
-                    <h3 className="text-lg font-black text-gray-900 mb-2">暂无待确认题目</h3>
-                    <p className="text-xs font-medium text-gray-400 max-w-[200px] leading-relaxed">
-                      快去首页拍照或上传试卷吧
-                    </p>
-                  </div>
-                ) : (
-                  batchResults.map((result, index) => (
+                {/* 过滤出当前选中学生的待确认题目 */}
+                {(() => {
+                  const filteredResults = batchResults.filter(result => 
+                    !result.studentId || result.studentId === selectedStudent
+                  );
+                  
+                  if (filteredResults.length === 0) {
+                    return (
+                      <div className="flex-1 flex flex-col items-center justify-center h-80 text-center">
+                        <div className="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-6 border border-blue-100">
+                          <Camera className="w-10 h-10 text-blue-200" />
+                        </div>
+                        <h3 className="text-lg font-black text-gray-900 mb-2">暂无待确认题目</h3>
+                        <p className="text-xs font-medium text-gray-400 max-w-[200px] leading-relaxed">
+                          快去首页拍照或上传试卷吧
+                        </p>
+                      </div>
+                    );
+                  }
+                  
+                  return filteredResults.map((result, index) => (
                     <div key={index} className="border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
                       <div className="px-4 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                         <span className="text-sm font-bold text-gray-700">{result.filename}</span>
@@ -2476,6 +2482,17 @@ export default function App() {
                                     <div className="flex items-start justify-between mb-3">
                                       <span className="text-xs font-bold text-blue-700">题目 {q.number || qIndex + 1}</span>
                                       <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            // 显示题目裁剪块，如果没有则显示原图
+                                            setPreviewImage(q.imageUrl || result.image);
+                                          }}
+                                          className="w-8 h-8 bg-blue-50 text-blue-300 rounded-xl flex items-center justify-center hover:bg-blue-100 hover:text-blue-600 transition-all active:scale-95 border border-blue-100"
+                                          title="查看题目裁剪块"
+                                        >
+                                          <Eye className="w-4 h-4" />
+                                        </button>
                                         {!q.imageUrl && (
                                           <button 
                                             onClick={(e) => {
@@ -2595,20 +2612,13 @@ export default function App() {
                                     
                                     {/* 操作按钮 */}
                                     <div className="flex items-center justify-between">
-                                      {/* 查看题目裁片按钮 - 与错题列表逻辑完全一致 */}
+                                      {/* 查看原卷按钮 */}
                                       <button 
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          // 显示题目裁剪块，如果没有则显示原图
-                                          const imageToShow = q.questionImage || q.imageUrl || '';
-                                          if (imageToShow) {
-                                            setPreviewImage(imageToShow);
-                                          }
-                                        }}
-                                        className="w-8 h-8 bg-blue-50 text-blue-300 rounded-xl flex items-center justify-center hover:bg-blue-100 hover:text-blue-600 transition-all active:scale-95 border border-blue-100"
-                                        title="查看题目裁剪块"
+                                        onClick={() => setPreviewImage(result.image)}
+                                        className="w-8 h-8 bg-blue-50 rounded-full flex items-center justify-center hover:bg-blue-100 transition-colors"
+                                        title="查看原卷"
                                       >
-                                        <Eye className="w-4 h-4" />
+                                        <Eye className="w-4 h-4 text-blue-600" />
                                       </button>
                                       
                                       <div className="flex gap-2">
@@ -2799,8 +2809,8 @@ export default function App() {
                         </button>
                       </div>
                     </div>
-                  ))
-                )}
+                  ));
+                })()}
               </div>
             )}
           </div>
