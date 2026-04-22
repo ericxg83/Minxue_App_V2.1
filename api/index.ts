@@ -1184,10 +1184,17 @@ app.post("/api/students", async (req, res) => {
         // 返回处理后的图片（与 AI 分析使用的图片尺寸一致），供前端裁剪使用
         if (processedBase64 && parsedData) {
           parsedData.processedImage = `data:image/jpeg;base64,${processedBase64}`;
+          console.log(`Set processedImage, length: ${parsedData.processedImage.length}`);
+        } else {
+          console.warn("processedBase64 or parsedData is null/undefined, cannot set processedImage", {
+            hasProcessedBase64: !!processedBase64,
+            hasParsedData: !!parsedData
+          });
         }
         
         // 为每个题目生成裁剪后的图片（使用处理后的图片，确保 box 坐标与裁剪图片尺寸一致）
         if (parsedData.questions && Array.isArray(parsedData.questions)) {
+          console.log(`Processing ${parsedData.questions.length} questions for cropping...`);
           // 串行处理题目，以便实现智能截断逻辑
           const questionsWithImages = [];
           for (let i = 0; i < parsedData.questions.length; i++) {
@@ -1230,8 +1237,18 @@ app.post("/api/students", async (req, res) => {
                   questionsWithImages.push(q);
                   continue;
                 }
-                const questionImage = await cropImage(`data:image/jpeg;base64,${processedBase64}`, adjustedBox);
-                questionsWithImages.push({ ...q, questionImage });
+                
+                console.log(`Cropping question ${q.number} with box:`, adjustedBox);
+                console.log(`processedBase64 length: ${processedBase64.length}`);
+                
+                try {
+                  const questionImage = await cropImage(`data:image/jpeg;base64,${processedBase64}`, adjustedBox);
+                  console.log(`Cropped image length: ${questionImage.length}`);
+                  questionsWithImages.push({ ...q, questionImage });
+                } catch (cropError) {
+                  console.error(`Failed to crop question ${q.number}:`, cropError);
+                  questionsWithImages.push(q);
+                }
               } else {
                 questionsWithImages.push(q);
               }
