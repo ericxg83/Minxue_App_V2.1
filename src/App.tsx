@@ -1905,8 +1905,11 @@ export default function App() {
                                           checked={q.selected || false}
                                           onChange={(e) => {
                                             const updatedResults = [...batchResults];
-                                            updatedResults[index].questions[qIndex].selected = e.target.checked;
-                                            setBatchResults(updatedResults);
+                                            const originalIndex = updatedResults.findIndex(r => r.id === result.id);
+                                            if (originalIndex !== -1) {
+                                              updatedResults[originalIndex].questions[qIndex].selected = e.target.checked;
+                                              setBatchResults(updatedResults);
+                                            }
                                           }}
                                         />
                                       </div>
@@ -2651,8 +2654,11 @@ export default function App() {
                                           onClick={() => {
                                             // 从待确认列表中排除该题目
                                             const updatedResults = [...batchResults];
-                                            updatedResults[index].questions = updatedResults[index].questions.filter((item: any) => item !== q);
-                                            setBatchResults(updatedResults);
+                                            const originalIndex = updatedResults.findIndex(r => r.id === result.id);
+                                            if (originalIndex !== -1) {
+                                              updatedResults[originalIndex].questions = updatedResults[originalIndex].questions.filter((item: any) => item !== q);
+                                              setBatchResults(updatedResults);
+                                            }
                                           }}
                                           className="px-4 py-2 text-xs font-bold text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                                         >
@@ -2693,8 +2699,11 @@ export default function App() {
                                               
                                               // 从待确认列表中移除该题目
                                               const updatedResults = [...batchResults];
-                                              updatedResults[index].questions = updatedResults[index].questions.filter((item: any) => item !== q);
-                                              setBatchResults(updatedResults);
+                                              const originalIndex = updatedResults.findIndex(r => r.id === result.id);
+                                              if (originalIndex !== -1) {
+                                                updatedResults[originalIndex].questions = updatedResults[originalIndex].questions.filter((item: any) => item !== q);
+                                                setBatchResults(updatedResults);
+                                              }
                                               
                                               // 刷新错题列表
                                               await fetchHistory();
