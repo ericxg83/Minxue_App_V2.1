@@ -938,8 +938,8 @@ export default function App() {
       reader.onload = async (event) => {
         const result = event.target?.result as string;
         
-        // 压缩图片以减少传输体积
-        const compressedBase64 = await compressImage(result, 1200, 0.85);
+        // 压缩图片以减少传输体积（确保不超过 ModelScope API 的 2048x2048 限制）
+        const compressedBase64 = await compressImage(result, 1024, 0.85);
         
         // 立即加入待确认列表，状态为 processing
         // 同时保存原始图片和压缩后的图片（AI识别使用的图片）
@@ -1136,8 +1136,8 @@ export default function App() {
       reader.onload = async (event) => {
         const result = event.target?.result as string;
         
-        // 压缩图片（AI识别使用，用于裁剪确保坐标匹配）
-        const compressedBase64 = await compressImage(result, 1200, 0.85);
+        // 压缩图片（AI识别使用，用于裁剪确保坐标匹配，确保不超过 2048x2048 限制）
+        const compressedBase64 = await compressImage(result, 1024, 0.85);
         
         const newItem = {
           id: `temp-${Date.now()}-${i}`,
