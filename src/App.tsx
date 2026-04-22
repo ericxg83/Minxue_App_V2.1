@@ -2595,22 +2595,20 @@ export default function App() {
                                     
                                     {/* 操作按钮 */}
                                     <div className="flex items-center justify-between">
-                                      {/* 查看题目裁片按钮 - 使用压缩后的图片裁剪，确保坐标匹配 */}
+                                      {/* 查看题目裁片按钮 - 使用后端处理后的图片裁剪，确保与 AI 坐标一致 */}
                                       <button 
                                         onClick={async (e) => {
                                           e.stopPropagation();
-                                          // 使用压缩后的图片（AI识别时使用的图片）进行裁剪，确保 box 坐标匹配
-                                          const cropImageSource = result.compressedImage || result.image;
-                                          if (q.box && cropImageSource) {
+                                          // 使用后端返回的 processedImage（与 AI 分析的图片尺寸一致）进行裁剪
+                                          const cropSource = result.processedImage || result.image;
+                                          if (q.box && cropSource) {
                                             try {
-                                              const cropped = await cropImage(cropImageSource, q.box);
+                                              const cropped = await cropImage(cropSource, q.box);
                                               setPreviewImage(cropped);
                                             } catch (err) {
                                               console.error('Crop image error:', err);
-                                              setPreviewImage(cropImageSource);
+                                              setPreviewImage(cropSource);
                                             }
-                                          } else if (cropImageSource) {
-                                            setPreviewImage(cropImageSource);
                                           }
                                         }}
                                         className="w-8 h-8 bg-blue-50 text-blue-300 rounded-xl flex items-center justify-center hover:bg-blue-100 hover:text-blue-600 transition-all active:scale-95 border border-blue-100"

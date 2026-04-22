@@ -856,8 +856,29 @@ app.post("/api/students", async (req, res) => {
 
               console.log("清理后 base64 长度:", cleanBase64.length);
 
-              // 构建请求体 - ModelScope 需要 data URL 格式
-              const imageUrl = `data:image/jpeg;base64,${cleanBase64}`;
+              // 始终使用 Sharp 调整图片尺寸，确保后端、ModelScope 和裁剪使用完全相同的图片
+              let processedBase64 = cleanBase64;
+              try {
+                const imageBuffer = Buffer.from(cleanBase64, 'base64');
+                const metadata = await sharp(imageBuffer).metadata();
+                const origWidth = metadata.width || 0;
+                const origHeight = metadata.height || 0;
+                console.log(`原始图片尺寸: ${origWidth}x${origHeight}`);
+                
+                // 统一调整为 1024px 最大边，确保与前端发送的图片尺寸接近
+                const resizedBuffer = await sharp(imageBuffer)
+                  .resize(1024, 1024, { fit: 'inside', withoutEnlargement: true })
+                  .jpeg({ quality: 90 })
+                  .toBuffer();
+                processedBase64 = resizedBuffer.toString('base64');
+                const newMetadata = await sharp(resizedBuffer).metadata();
+                console.log(`统一调整后图片尺寸: ${newMetadata.width}x${newMetadata.height}`);
+              } catch (resizeError) {
+                console.warn("图片调整失败，使用原始图片:", resizeError);
+              }
+
+              // 构建请求体 - ModelScope 需要 data URL 格式（使用处理后的图片）
+              const imageUrl = `data:image/jpeg;base64,${processedBase64}`;
               const requestBody = {
                 model: modelscopeModelId,
                 max_tokens: 3000,
@@ -1157,7 +1178,12 @@ app.post("/api/students", async (req, res) => {
       try {
         const parsedData = tryParse(content);
         
-        // 为每个题目生成裁剪后的图片
+        // 返回处理后的图片（与 AI 分析使用的图片尺寸一致），供前端裁剪使用
+        if (processedBase64 && parsedData) {
+          parsedData.processedImage = `data:image/jpeg;base64,${processedBase64}`;
+        }
+        
+        // 为每个题目生成裁剪后的图片（使用处理后的图片，确保 box 坐标与裁剪图片尺寸一致）
         if (parsedData.questions && Array.isArray(parsedData.questions)) {
           // 串行处理题目，以便实现智能截断逻辑
           const questionsWithImages = [];
@@ -1195,7 +1221,8 @@ app.post("/api/students", async (req, res) => {
                   }
                 }
                 
-                const questionImage = await cropImage(base64Image, adjustedBox);
+                // 使用处理后的图片进行裁剪（processedBase64），确保与 AI 看到的图片尺寸一致
+                const questionImage = await cropImage(`data:image/jpeg;base64,${processedBase64}`, adjustedBox);
                 questionsWithImages.push({ ...q, questionImage });
               } else {
                 questionsWithImages.push(q);
